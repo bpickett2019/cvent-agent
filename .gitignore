@@ -1,0 +1,32 @@
+# Dependencies and builds
+node_modules/
+.next/
+dist/
+build/
+coverage/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+
+# IDE and OS
+.DS_Store
+.idea/
+.vscode/
+
+# Runtime artifacts
+artifacts/
+logs/
+*.log
