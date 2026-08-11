@@ -253,7 +253,42 @@ console.log("\n[3] Resume skips completed work");
   check("verification still runs on resume", (counts.get("verify.site") ?? 0) === 2);
 }
 
-console.log("\n[4] Changed spec cannot resume");
+console.log("\n[4] Resume after a task throws");
+{
+  const store = new InMemoryRunStore();
+  const api = new StubCventApi();
+  const provider = new StubBrowserProvider(() => api.createCalls === 1);
+  const counts = new Map<string, number>();
+  const run = makeHarness(async ({ task }) => {
+    const invocation = (counts.get(task.id) ?? 0) + 1;
+    counts.set(task.id, invocation);
+    if (task.id === "site.page.home" && invocation === 1) {
+      throw new Error("transient executor failure");
+    }
+    return success(task.id);
+  });
+
+  const first = await run(makeArgs(makeSpec(), store, api, provider));
+  await run(makeArgs(makeSpec(), store, api, provider, first.runId));
+
+  check(
+    "tasks completed before the throw are not re-executed",
+    counts.get("site.theme") === 1,
+    `${counts.get("site.theme")} execution(s)`
+  );
+  check(
+    "previously thrown task is re-executed",
+    counts.get("site.page.home") === 2,
+    `${counts.get("site.page.home")} execution(s)`
+  );
+  check(
+    "resume does not create a duplicate event",
+    api.createCalls === 1,
+    `${api.createCalls} create call(s)`
+  );
+}
+
+console.log("\n[5] Changed spec cannot resume");
 {
   const store = new InMemoryRunStore();
   const api = new StubCventApi();
@@ -270,7 +305,7 @@ console.log("\n[4] Changed spec cannot resume");
   check("refused resume has no new side effects", api.createCalls === 1 && provider.connectCalls === 1);
 }
 
-console.log("\n[5] Shared budget exhaustion");
+console.log("\n[6] Shared budget exhaustion");
 {
   const store = new InMemoryRunStore();
   const api = new StubCventApi();
@@ -289,7 +324,7 @@ console.log("\n[5] Shared budget exhaustion");
   check("API verification still runs", result.report !== null && api.draftChecks > 0);
 }
 
-console.log("\n[6] Browser closes after task throw");
+console.log("\n[7] Browser closes after task throw");
 {
   const store = new InMemoryRunStore();
   const api = new StubCventApi();
@@ -303,7 +338,7 @@ console.log("\n[6] Browser closes after task throw");
   check("browser closes after throw", provider.releaseCalls === 1);
 }
 
-console.log("\n[7] Verification follows partial failure");
+console.log("\n[8] Verification follows partial failure");
 {
   const store = new InMemoryRunStore();
   const api = new StubCventApi();
