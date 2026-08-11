@@ -1,0 +1,28 @@
+id: registration/create-registration-type
+version: 1
+goal: >
+  Ensure one registration type exists with the requested key, name, and
+  description, independently of admission items.
+preconditions:
+  - Event exists and is bound to the run's event id
+  - Registration configuration is available for the Draft event
+steps:
+  - description: Open the registration type manager
+    selectorHint: "TODO"
+  - description: Find registration type key {{registrationType.key}} or begin creating it if absent
+    selectorHint: "TODO"
+  - description: Apply the exact registration type configuration {{registrationType}}
+    selectorHint: "TODO"
+  - description: Save and confirm the registration type configuration
+    selectorHint: "TODO"
+idempotency:
+  check: "A single registration type with key {{registrationType.key}} exists and equals {{registrationType}}"
+failureModes:
+  - symptom: "A registration type with the requested name exists under a different identity"
+    action: "Halt and report the conflict; do not create a likely duplicate."
+  - symptom: "Cvent rejects the requested registration type"
+    action: "Halt and report the exact validation message."
+provenance:
+  authoredBy: human
+  validatedAgainst: null
+  lastReviewed: null

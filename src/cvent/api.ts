@@ -137,6 +137,15 @@ export class CventApi {
     return this.listAll(`/events/${eventId}/registration-paths`);
   }
 
+  async listRegistrationTypes(eventId: string): Promise<CventRegistrationType[]> {
+    return this.listAll(`/events/${eventId}/registration-types`);
+  }
+
+  /** The question read surface does not expose conditional visibility rules. */
+  async listQuestions(eventId: string): Promise<CventQuestion[]> {
+    return this.listAll(`/events/${eventId}/questions`);
+  }
+
   async listFees(eventId: string): Promise<CventFee[]> {
     return this.listAll(`/fees?eventId=${eventId}`);
   }
@@ -177,6 +186,23 @@ export interface CventRegistrationPath {
   name: string;
   isDefault?: boolean;
   admissionItems?: { id: string }[];
+}
+export interface CventRegistrationType {
+  id: string;
+  key?: string;
+  name: string;
+  description?: string;
+}
+export interface CventQuestion {
+  id: string;
+  key?: string;
+  text: string;
+  page?: string;
+  order?: number;
+  answerType?: string;
+  answerValues?: string[];
+  required?: boolean;
+  // Conditional visibility is not present on the known API read surface.
 }
 export interface CventFee {
   id: string;

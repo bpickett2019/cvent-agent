@@ -78,10 +78,12 @@ export async function verify(
 
   /* ------------------------------------------------------------ registration */
 
-  const [items, paths, vouchers] = await Promise.all([
+  const [items, paths, vouchers, registrationTypes, questions] = await Promise.all([
     api.listAdmissionItems(eventId),
     api.listRegistrationPaths(eventId),
     api.listVouchers(eventId),
+    api.listRegistrationTypes(eventId),
+    api.listQuestions(eventId),
   ]);
 
   const byName = new Map(items.map((i) => [i.name.trim().toLowerCase(), i]));
@@ -168,6 +170,95 @@ export async function verify(
         message: `Voucher code "${want.code}" was not created.`,
       });
     }
+  }
+
+  const registrationTypesByKey = new Map(
+    registrationTypes.flatMap((type) => (type.key ? [[type.key, type] as const] : []))
+  );
+  const registrationTypesByName = new Map(
+    registrationTypes.map((type) => [type.name.trim().toLowerCase(), type])
+  );
+  for (const want of spec.registration.registrationTypes) {
+    const nameMatch = registrationTypesByName.get(want.name.trim().toLowerCase());
+    const got = registrationTypesByKey.get(want.key) ?? (nameMatch?.key ? undefined : nameMatch);
+    if (!got) {
+      add({
+        severity: "blocking",
+        area: "registration",
+        message: `Registration type "${want.name}" was not created.`,
+      });
+      continue;
+    }
+    if (got.description !== undefined && got.description !== want.description) {
+      add({
+        severity: "warning",
+        area: "registration",
+        message: `Registration type "${want.name}" has a different description than requested.`,
+        expected: want.description,
+        actual: got.description,
+      });
+    }
+  }
+
+  const questionsByKey = new Map(
+    questions.flatMap((question) => (question.key ? [[question.key, question] as const] : []))
+  );
+  const questionsByText = new Map(questions.map((question) => [question.text.trim().toLowerCase(), question]));
+  for (const want of spec.registration.questions) {
+    const textMatch = questionsByText.get(want.text.trim().toLowerCase());
+    const got = questionsByKey.get(want.key) ?? (textMatch?.key ? undefined : textMatch);
+    if (!got) {
+      add({
+        severity: "blocking",
+        area: "registration",
+        message: `Registration question "${want.text}" was not created.`,
+      });
+      continue;
+    }
+
+    const comparisons: Array<{
+      label: string;
+      expected: unknown;
+      actual: unknown;
+      available: boolean;
+    }> = [
+      { label: "text", expected: want.text, actual: got.text, available: true },
+      { label: "page", expected: want.page, actual: got.page, available: got.page !== undefined },
+      { label: "order", expected: want.order, actual: got.order, available: got.order !== undefined },
+      {
+        label: "answer type",
+        expected: want.answerType,
+        actual: got.answerType,
+        available: got.answerType !== undefined,
+      },
+      {
+        label: "answer values",
+        expected: want.answerValues,
+        actual: got.answerValues,
+        available: got.answerValues !== undefined,
+      },
+      { label: "required state", expected: want.required, actual: got.required, available: got.required !== undefined },
+    ];
+    for (const comparison of comparisons) {
+      if (comparison.available && JSON.stringify(comparison.actual) !== JSON.stringify(comparison.expected)) {
+        add({
+          severity: "blocking",
+          area: "registration",
+          message: `Registration question "${want.text}" has the wrong ${comparison.label}.`,
+          expected: comparison.expected,
+          actual: comparison.actual,
+        });
+      }
+    }
+  }
+
+  if (spec.registration.questions.length > 0) {
+    add({
+      severity: "warning",
+      area: "registration",
+      message:
+        "Cvent's API does not expose question visibility rules. Visibility was not independently verified; review each rule in the Cvent registration UI.",
+    });
   }
 
   return {

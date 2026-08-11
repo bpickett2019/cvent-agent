@@ -141,6 +141,67 @@ export const WebsitePage = z.object({
 /* -------------------------------------------------------------- registration */
 /* channel: BROWSER for writes; API is READ-ONLY here and drives verification.  */
 
+/** Registration types are attendee classifications, not admission products. */
+export const RegistrationType = z.object({
+  key: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().default(""),
+});
+
+export const QuestionVisibility = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("always") }),
+  z.object({
+    type: z.literal("registrationTypes"),
+    registrationTypeKeys: z.array(z.string().min(1)).min(1),
+  }),
+  z.object({
+    type: z.literal("questionAnswer"),
+    questionKey: z.string().min(1),
+    matchingValues: z.array(z.string().min(1)).min(1),
+  }),
+]);
+
+const ChoiceAnswerTypes = new Set(["singleSelect", "multiSelect"]);
+
+export const QuestionPage = z.union([
+  z.literal("personal-information"),
+  z.literal("show-questions"),
+  z.string().min(1), // Custom registration page key.
+]);
+
+export const Question = z
+  .object({
+    key: z.string().min(1),
+    text: z.string().min(1),
+    page: QuestionPage,
+    order: z.number().int().nonnegative(),
+    answerType: z.enum([
+      "text",
+      "textarea",
+      "singleSelect",
+      "multiSelect",
+      "boolean",
+      "number",
+      "date",
+      "datetime",
+      "email",
+      "phone",
+      "fileUpload",
+    ]),
+    answerValues: z.array(z.string().min(1)).default([]),
+    required: z.boolean().default(false),
+    visibility: QuestionVisibility,
+  })
+  .superRefine((question, ctx) => {
+    if (ChoiceAnswerTypes.has(question.answerType) && question.answerValues.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["answerValues"],
+        message: `${question.answerType} questions require at least one answer value`,
+      });
+    }
+  });
+
 export const AdmissionItem = z.object({
   key: z.string().min(1),
   name: z.string().min(1),
@@ -187,6 +248,8 @@ export const AdvancedRule = z.object({
 });
 
 export const Registration = z.object({
+  registrationTypes: z.array(RegistrationType).default([]),
+  questions: z.array(Question).default([]),
   admissionItems: z.array(AdmissionItem).default([]),
   optionalItems: z.array(OptionalItem).default([]),
   vouchers: z.array(Voucher).default([]),
@@ -202,10 +265,11 @@ export const EventSpec = z
   .object({
     specVersion: z.literal("1.0"),
     details: EventDetails,
-    theme: Theme,
-    header: Header,
-    footer: Footer,
-    pages: z.array(WebsitePage).min(1),
+    /** Usually inherited from templateEventId; include only when this run must change it. */
+    theme: Theme.optional(),
+    header: Header.optional(),
+    footer: Footer.optional(),
+    pages: z.array(WebsitePage).min(1).optional(),
     registration: Registration,
   })
   .superRefine((spec, ctx) => {
@@ -216,19 +280,57 @@ export const EventSpec = z
       issue(["details", "end"], "end must be after start");
     }
 
-    const dupe = (label: string, keys: string[], path: string) => {
+    const dupe = (label: string, keys: string[], path: (string | number)[]) => {
       const seen = new Set<string>();
       keys.forEach((k, i) => {
-        if (seen.has(k)) issue([path, i, "key"], `duplicate ${label} key "${k}"`);
+        if (seen.has(k)) issue([...path, i, "key"], `duplicate ${label} key "${k}"`);
         seen.add(k);
       });
     };
 
-    dupe("page", spec.pages.map((p) => p.key), "pages");
-    dupe("admission item", spec.registration.admissionItems.map((a) => a.key), "registration");
-    dupe("registration path", spec.registration.paths.map((p) => p.key), "registration");
+    dupe("page", (spec.pages ?? []).map((p) => p.key), ["pages"]);
+    dupe("registration type", spec.registration.registrationTypes.map((t) => t.key), [
+      "registration",
+      "registrationTypes",
+    ]);
+    dupe("question", spec.registration.questions.map((q) => q.key), ["registration", "questions"]);
+    dupe("admission item", spec.registration.admissionItems.map((a) => a.key), [
+      "registration",
+      "admissionItems",
+    ]);
+    dupe("registration path", spec.registration.paths.map((p) => p.key), ["registration", "paths"]);
 
     // Referential integrity — cheaper to catch here than mid-run in Cvent.
+    const registrationTypeKeys = new Set(spec.registration.registrationTypes.map((t) => t.key));
+    const questionsByKey = new Map(spec.registration.questions.map((q) => [q.key, q]));
+    spec.registration.questions.forEach((question, i) => {
+      if (question.visibility.type === "registrationTypes") {
+        question.visibility.registrationTypeKeys.forEach((key) => {
+          if (!registrationTypeKeys.has(key)) {
+            issue(
+              ["registration", "questions", i, "visibility", "registrationTypeKeys"],
+              `question "${question.key}" references unknown registration type "${key}"`
+            );
+          }
+        });
+      }
+
+      if (question.visibility.type === "questionAnswer") {
+        const gatingQuestion = questionsByKey.get(question.visibility.questionKey);
+        if (!gatingQuestion) {
+          issue(
+            ["registration", "questions", i, "visibility", "questionKey"],
+            `question "${question.key}" references unknown prior question "${question.visibility.questionKey}"`
+          );
+        } else if (gatingQuestion.order >= question.order) {
+          issue(
+            ["registration", "questions", i, "visibility", "questionKey"],
+            `conditioning question "${gatingQuestion.key}" must come earlier than question "${question.key}"`
+          );
+        }
+      }
+    });
+
     const admissionKeys = new Set(spec.registration.admissionItems.map((a) => a.key));
     spec.registration.paths.forEach((p, i) =>
       p.admissionItemKeys.forEach((k) => {
@@ -250,7 +352,7 @@ export const EventSpec = z
       issue(["registration", "paths"], `exactly one default path required, found ${defaults.length}`);
     }
 
-    spec.pages.forEach((page, pi) =>
+    (spec.pages ?? []).forEach((page, pi) =>
       page.widgets.forEach((w, wi) => {
         if (w.type === "button" && w.action === "externalUrl" && !w.url) {
           issue(["pages", pi, "widgets", wi], "externalUrl button requires a url");
@@ -263,3 +365,7 @@ export type EventSpec = z.infer<typeof EventSpec>;
 export type WebsitePage = z.infer<typeof WebsitePage>;
 export type Widget = z.infer<typeof Widget>;
 export type Registration = z.infer<typeof Registration>;
+export type RegistrationType = z.infer<typeof RegistrationType>;
+export type Question = z.infer<typeof Question>;
+export type QuestionVisibility = z.infer<typeof QuestionVisibility>;
+export type QuestionPage = z.infer<typeof QuestionPage>;

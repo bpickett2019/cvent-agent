@@ -1,0 +1,26 @@
+id: registration/set-question-visibility
+version: 1
+goal: >
+  Apply the exact visibility rule to one existing registration question.
+preconditions:
+  - Event exists and is bound to the run's event id
+  - Question {{questionKey}} already exists
+  - Every registration type or prior question referenced by the rule already exists
+steps:
+  - description: Open visibility settings for question {{questionKey}}
+    selectorHint: "TODO"
+  - description: Apply the exact visibility rule {{visibility}}
+    selectorHint: "TODO"
+  - description: Save and confirm the visibility rule
+    selectorHint: "TODO"
+idempotency:
+  check: "Question {{questionKey}} has exactly the visibility rule {{visibility}}"
+failureModes:
+  - symptom: "A referenced registration type or prior question is unavailable"
+    action: "Halt and report the missing key; do not weaken or omit the condition."
+  - symptom: "Cvent cannot represent the requested matching values"
+    action: "Halt and report the unsupported values; do not broaden visibility."
+provenance:
+  authoredBy: human
+  validatedAgainst: null
+  lastReviewed: null

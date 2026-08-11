@@ -7,7 +7,9 @@ import type {
   CventAdmissionItem,
   CventApi,
   CventEvent,
+  CventQuestion,
   CventRegistrationPath,
+  CventRegistrationType,
   CventVoucher,
 } from "./src/cvent/api";
 import {
@@ -104,6 +106,16 @@ class StubCventApi {
   }
 
   async listVouchers(_eventId: string): Promise<CventVoucher[]> {
+    this.verificationReads += 1;
+    return [];
+  }
+
+  async listRegistrationTypes(_eventId: string): Promise<CventRegistrationType[]> {
+    this.verificationReads += 1;
+    return [];
+  }
+
+  async listQuestions(_eventId: string): Promise<CventQuestion[]> {
     this.verificationReads += 1;
     return [];
   }

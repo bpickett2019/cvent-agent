@@ -65,69 +65,131 @@ export function plan(spec: EventSpec): Plan {
 
   /* --------------------------- website: browser only ------------------------ */
 
-  const theme = push({
-    id: "site.theme",
-    kind: "site.theme",
-    channel: "browser",
-    dependsOn: [details],
-    procedure: "site/apply-theme",
-    payload: { theme: spec.theme },
-    label: `Apply theme "${spec.theme.templateName}"`,
-  });
+  // Site-designer fields are normally inherited from the copied event. Emit
+  // work only for fields the spec explicitly asks this run to change.
+  const siteTasks: string[] = [];
+  let theme: string | undefined;
+  if (spec.theme) {
+    theme = push({
+      id: "site.theme",
+      kind: "site.theme",
+      channel: "browser",
+      dependsOn: [details],
+      procedure: "site/apply-theme",
+      payload: { theme: spec.theme },
+      label: `Apply theme "${spec.theme.templateName}"`,
+    });
+    siteTasks.push(theme);
+  }
 
-  const header = push({
-    id: "site.header",
-    kind: "site.header",
-    channel: "browser",
-    dependsOn: [theme],
-    procedure: "site/configure-header",
-    payload: { header: spec.header },
-    label: "Configure header",
-  });
+  const siteBase = theme ?? details;
+  if (spec.header) {
+    siteTasks.push(
+      push({
+        id: "site.header",
+        kind: "site.header",
+        channel: "browser",
+        dependsOn: [siteBase],
+        procedure: "site/configure-header",
+        payload: { header: spec.header },
+        label: "Configure header",
+      })
+    );
+  }
 
-  const footer = push({
-    id: "site.footer",
-    kind: "site.footer",
-    channel: "browser",
-    dependsOn: [theme],
-    procedure: "site/configure-footer",
-    payload: { footer: spec.footer },
-    label: "Configure footer",
-  });
+  if (spec.footer) {
+    siteTasks.push(
+      push({
+        id: "site.footer",
+        kind: "site.footer",
+        channel: "browser",
+        dependsOn: [siteBase],
+        procedure: "site/configure-footer",
+        payload: { footer: spec.footer },
+        label: "Configure footer",
+      })
+    );
+  }
 
-  // Pages depend on theme (not on each other) so a single page failure does not
-  // block the rest — it lands in triage on its own.
-  const pageTasks = spec.pages.map((page) => {
+  // Page and widget tasks are conditional on pages being explicitly supplied.
+  // Pages do not depend on each other, so one failure does not block siblings.
+  for (const page of spec.pages ?? []) {
     const create = push({
       id: `site.page.${page.key}`,
       kind: "site.page.create",
       channel: "browser",
-      dependsOn: [theme],
+      dependsOn: [siteBase],
       procedure: "site/create-page",
       payload: { page: { key: page.key, title: page.title, slug: page.slug, showInNav: page.showInNav } },
       label: `Create page "${page.title}"`,
     });
+    siteTasks.push(create);
 
-    // One task per widget. Granularity here is what makes "retries resume from
-    // the failed step" true rather than aspirational.
-    page.widgets.forEach((widget, i) =>
-      push({
-        id: `site.page.${page.key}.widget.${i}`,
-        kind: `site.widget.${widget.type}`,
-        channel: "browser",
-        dependsOn: [create],
-        procedure: `site/widget-${widget.type}`,
-        payload: { pageKey: page.key, index: i, widget },
-        label: `Add ${widget.type} widget to "${page.title}"`,
-      })
-    );
-
-    return create;
-  });
+    page.widgets.forEach((widget, i) => {
+      siteTasks.push(
+        push({
+          id: `site.page.${page.key}.widget.${i}`,
+          kind: `site.widget.${widget.type}`,
+          channel: "browser",
+          dependsOn: [create],
+          procedure: `site/widget-${widget.type}`,
+          payload: { pageKey: page.key, index: i, widget },
+          label: `Add ${widget.type} widget to "${page.title}"`,
+        })
+      );
+    });
+  }
 
   /* ------------------- registration: browser writes, API reads --------------- */
 
   const reg = spec.registration;
+
+  const registrationTypeTasks = new Map(
+    reg.registrationTypes.map((registrationType) => [
+      registrationType.key,
+      push({
+        id: `reg.type.${registrationType.key}`,
+        kind: "reg.registrationType.create",
+        channel: "browser",
+        dependsOn: [details],
+        procedure: "registration/create-registration-type",
+        payload: { registrationType },
+        label: `Registration type "${registrationType.name}"`,
+      }),
+    ])
+  );
+
+  // Stable order plus explicit dependencies makes conditional chains safe even
+  // when the input array itself is not sorted by question order.
+  const questions = [...reg.questions].sort((a, b) => a.order - b.order || a.key.localeCompare(b.key));
+  for (const question of questions) {
+    const conditionalDependencies =
+      question.visibility.type === "questionAnswer"
+        ? [`reg.question.${question.visibility.questionKey}.visibility`]
+        : question.visibility.type === "registrationTypes"
+          ? question.visibility.registrationTypeKeys.map((key) => registrationTypeTasks.get(key)!)
+          : [];
+    const { visibility, ...definition } = question;
+    const create = push({
+      id: `reg.question.${question.key}`,
+      kind: "reg.question.create",
+      channel: "browser",
+      dependsOn: [details, ...conditionalDependencies],
+      procedure: "registration/create-question",
+      payload: { question: definition },
+      label: `Registration question "${question.text}"`,
+    });
+
+    push({
+      id: `reg.question.${question.key}.visibility`,
+      kind: "reg.question.visibility",
+      channel: "browser",
+      dependsOn: [create],
+      procedure: "registration/set-question-visibility",
+      payload: { questionKey: question.key, visibility },
+      label: `Set visibility for question "${question.text}"`,
+    });
+  }
 
   const admissionTasks = reg.admissionItems.map((item) =>
     push({
@@ -214,15 +276,17 @@ export function plan(spec: EventSpec): Plan {
     label: "Confirm event is still in Draft",
   });
 
-  push({
-    id: "verify.site",
-    kind: "verify.siteScreenshots",
-    channel: "browser",
-    dependsOn: [...pageTasks, header, footer],
-    procedure: "site/capture-screenshots",
-    payload: { pageKeys: spec.pages.map((p) => p.key) },
-    label: "Capture site screenshots for review",
-  });
+  if (siteTasks.length > 0) {
+    push({
+      id: "verify.site",
+      kind: "verify.siteScreenshots",
+      channel: "browser",
+      dependsOn: [...siteTasks],
+      procedure: "site/capture-screenshots",
+      payload: { pageKeys: (spec.pages ?? []).map((p) => p.key) },
+      label: "Capture site screenshots for review",
+    });
+  }
 
   assertAcyclic(tasks);
   return { specHash: hash(spec), tasks };
