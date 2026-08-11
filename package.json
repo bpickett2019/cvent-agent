@@ -5,7 +5,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "smoke": "tsx smoke.ts",
-    "smoke:executor": "tsx executor.smoke.ts"
+    "smoke:executor": "tsx executor.smoke.ts",
+    "smoke:run": "tsx run.smoke.ts"
   },
   "dependencies": {
     "@earendil-works/pi-agent-core": "0.84.1",

@@ -100,9 +100,14 @@ export class BrowserSession {
     trace: (s: StepTrace) => void
   ): Promise<BrowserSession> {
     const { browser, release } = await provider.connect();
-    const context = browser.contexts()[0] ?? (await browser.newContext());
-    const page = context.pages()[0] ?? (await context.newPage());
-    return new BrowserSession(page, guardrails, trace, release);
+    try {
+      const context = browser.contexts()[0] ?? (await browser.newContext());
+      const page = context.pages()[0] ?? (await context.newPage());
+      return new BrowserSession(page, guardrails, trace, release);
+    } catch (error) {
+      await release().catch(() => {});
+      throw error;
+    }
   }
 
   /**

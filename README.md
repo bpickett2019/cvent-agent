@@ -39,6 +39,7 @@ src/guardrails/middleware.ts Deny-list, event-ID validation, publish
 src/browser/driver.ts        Steel.dev + local Playwright behind one interface.
 src/cvent/api.ts             REST client. Writes events; reads everything else.
 src/verify/verifier.ts       Spec vs. actual diff. Operator-readable output.
+src/run/orchestrator.ts      Persisted plan execution, resume, budget, and triage.
 src/procedures/              Browser procedures as versioned data.
 ```
 
