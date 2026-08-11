@@ -4,6 +4,9 @@ Deterministic core of the Cvent configuration agent. Everything here runs
 without a Cvent account, an Azure subscription, or a browser. `npx tsx smoke.ts`
 proves it.
 
+For current implementation status, local setup, blockers, and the exact next-chat
+prompt, read [`docs/HANDOFF.md`](docs/HANDOFF.md) first.
+
 ## Design commitments
 
 **The Event Spec is the only contract.** The intake form is validated into an
