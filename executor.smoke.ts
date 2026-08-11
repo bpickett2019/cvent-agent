@@ -9,13 +9,18 @@ import {
   type AssistantMessage,
 } from "@earendil-works/pi-ai";
 import { NOOP_TELEMETRY_CONTEXT } from "@earendil-works/pi-telemetry";
+import { InMemorySpanExporter } from "@opentelemetry/sdk-trace-base";
 import {
   createTaskExecutor,
   type ExecuteTaskArgs,
   type ExecutorDependencies,
   type TaskResult,
 } from "./src/agent/executor";
-import { createLangfuseTelemetry, type AuditTelemetry } from "./src/agent/telemetry";
+import {
+  createLangfuseTelemetry,
+  shutdownLangfuse,
+  type AuditTelemetry,
+} from "./src/agent/telemetry";
 import type { BrowserSession } from "./src/browser/driver";
 import { Guardrails, type Action } from "./src/guardrails/middleware";
 import { parseProcedure } from "./src/procedures/loader";
@@ -264,11 +269,7 @@ provenance:
 
 console.log("\n[8] Langfuse audit adapter");
 {
-  let uploaded: { batch?: { type?: string; body?: Record<string, unknown> }[] } = {};
-  const fetchStub = (async (_input: string | URL | Request, init?: RequestInit) => {
-    uploaded = JSON.parse(String(init?.body));
-    return new Response(JSON.stringify({ successes: [], errors: [] }), { status: 207 });
-  }) as typeof globalThis.fetch;
+  const exporter = new InMemorySpanExporter();
   const telemetry = createLangfuseTelemetry({
     host: "https://langfuse.example",
     publicKey: "public",
@@ -276,8 +277,10 @@ console.log("\n[8] Langfuse audit adapter");
     runId: "run-audit",
     taskId: "site.theme",
     operator: "ops@example.com",
-    fetch: fetchStub,
+    task: { kind: "site.theme", label: "Apply the event theme" },
+    exporter,
   });
+  telemetry.recordGeneration?.(fauxAssistantMessage("Configured theme"), 1);
   telemetry.recordStep({
     name: "browser_fill",
     at: "2027-01-01T00:00:00.000Z",
@@ -286,13 +289,26 @@ console.log("\n[8] Langfuse audit adapter");
     error: "failed",
     screenshot: Buffer.from("screenshot"),
   });
+  telemetry.recordStep({
+    name: "task.result",
+    at: "2027-01-01T00:00:01.000Z",
+    ok: false,
+    output: { status: "halted" },
+    error: "failed",
+  });
   await telemetry.flush();
-  const auditEvent = uploaded.batch?.find((event) => event.type === "event-create");
-  const metadata = auditEvent?.body?.metadata as Record<string, unknown> | undefined;
-  const action = metadata?.action as Action | undefined;
-  check("audit identity is attached", metadata?.runId === "run-audit" && metadata?.operator === "ops@example.com");
-  check("audit tool values are redacted", action?.value === "«9 chars»");
-  check("failure screenshot is retained", typeof metadata?.failureScreenshotBase64 === "string");
+  const spans = exporter.getFinishedSpans();
+  const serialized = JSON.stringify(spans.map((span) => ({ name: span.name, attributes: span.attributes })));
+  const root = spans.find((span) => span.name === "execute-cvent-task");
+  const modelSpan = spans.find((span) => span.name === "generate-cvent-action");
+  const toolSpan = spans.find((span) => span.name === "fill-cvent-field");
+  check("agent, generation, and tool observations are emitted", root !== undefined && modelSpan !== undefined && toolSpan !== undefined);
+  check("generation and tool are nested under the agent", modelSpan?.parentSpanContext?.spanId === root?.spanContext().spanId && toolSpan?.parentSpanContext?.spanId === root?.spanContext().spanId);
+  check("model and usage fields are attached to the generation", modelSpan?.attributes["langfuse.observation.type"] === "generation" && typeof modelSpan.attributes["langfuse.observation.model.name"] === "string" && typeof modelSpan.attributes["langfuse.observation.usage_details"] === "string");
+  check("audit identity is attached without operator PII", serialized.includes("run-audit") && serialized.includes("operator-") && !serialized.includes("ops@example.com"));
+  check("audit tool values are redacted", serialized.includes("«9 chars»") && !serialized.includes('"value":"sensitive"'));
+  check("failure screenshot is hashed, not uploaded", serialized.includes("failureScreenshotSha256") && !serialized.includes(Buffer.from("screenshot").toString("base64")));
+  await shutdownLangfuse();
 }
 
 console.log(`\n${failures === 0 ? `ALL EXECUTOR CHECKS PASSED (${checks} checks)` : `${failures} FAILURE(S)`}\n`);

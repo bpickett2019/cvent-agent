@@ -43,6 +43,25 @@ src/run/orchestrator.ts      Persisted plan execution, resume, budget, and triag
 src/procedures/              Browser procedures as versioned data.
 ```
 
+## Langfuse tracing
+
+Production task execution uses the Langfuse JS/TS v5 SDK and OpenTelemetry. Each
+Cvent task is one `agent` trace, grouped under the run id as its Langfuse
+session. Model turns are `generation` observations with model, token usage, and
+cost; browser actions are sibling `tool` observations. Run-specific values stay
+in metadata while observation names remain stable for dashboards and evaluators.
+
+Configure `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, and
+`LANGFUSE_BASE_URL`. Set `LANGFUSE_TRACING_ENVIRONMENT` so development traces do
+not pollute production views, and set `LANGFUSE_RELEASE` in deployments. Operator
+emails are hashed, field values and reasoning are redacted, common secrets and
+emails are masked at export, and failure screenshots are represented only by a
+SHA-256 digest. The short-lived CLI flushes every task and shuts OpenTelemetry
+down before exit.
+
+See the current [Langfuse tracing best practices](https://langfuse.com/docs/observability/best-practices)
+and [SDK instrumentation guide](https://langfuse.com/docs/observability/sdk/instrumentation).
+
 ## Cvent API coverage
 
 | Surface | Channel | Notes |

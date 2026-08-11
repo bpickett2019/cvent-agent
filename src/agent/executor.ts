@@ -74,7 +74,7 @@ export interface ExecutorDependencies {
   streamFn: StreamFn;
   operator: string;
   runId: string;
-  createTelemetry(taskId: string): AuditTelemetry;
+  createTelemetry(task: Task, procedure: Procedure | null): AuditTelemetry;
 }
 
 const ProposedProcedureType = Type.Object(
@@ -128,7 +128,7 @@ const MAX_SAME_SELECTOR_ATTEMPTS = 3;
 
 export function createTaskExecutor(dependencies: ExecutorDependencies) {
   return async function runTask(args: ExecuteTaskArgs): Promise<TaskResult> {
-    const telemetry = dependencies.createTelemetry(args.task.id);
+    const telemetry = dependencies.createTelemetry(args.task, args.procedure);
     let terminal: TaskResult | null = null;
     let toolCalls = 0;
     let modelCost = 0;
@@ -208,8 +208,11 @@ export function createTaskExecutor(dependencies: ExecutorDependencies) {
       },
     });
 
+    let generation = 0;
     agent.subscribe(async (event) => {
       if (event.type === "message_end" && isAssistantMessage(event.message)) {
+        generation += 1;
+        telemetry.recordGeneration?.(event.message, generation);
         const cost = event.message.usage.cost.total;
         args.guardrails.accrue(cost);
         modelCost += cost;
@@ -245,6 +248,12 @@ export function createTaskExecutor(dependencies: ExecutorDependencies) {
       name: "task.result",
       at: new Date().toISOString(),
       ok: result.status === "success",
+      output: {
+        status: result.status,
+        summary: result.summary,
+        haltReason: result.haltReason,
+        evidence: result.evidence,
+      },
       error: result.haltDetail ?? undefined,
     });
 
@@ -499,7 +508,8 @@ function createProductionDependencies(): ExecutorDependencies {
 
   const operator = requiredEnv("EMERALDX_OPERATOR");
   const runId = requiredEnv("EMERALDX_RUN_ID");
-  const host = requiredEnv("LANGFUSE_HOST");
+  const host = process.env.LANGFUSE_BASE_URL?.trim() || process.env.LANGFUSE_HOST?.trim();
+  if (!host) throw new Error("LANGFUSE_BASE_URL (or legacy LANGFUSE_HOST) is required");
   const publicKey = requiredEnv("LANGFUSE_PUBLIC_KEY");
   const secretKey = requiredEnv("LANGFUSE_SECRET_KEY");
 
@@ -508,7 +518,22 @@ function createProductionDependencies(): ExecutorDependencies {
     streamFn: models.streamSimple.bind(models),
     operator,
     runId,
-    createTelemetry: (taskId) =>
-      createLangfuseTelemetry({ host, publicKey, secretKey, operator, runId, taskId }),
+    createTelemetry: (task, procedure) =>
+      createLangfuseTelemetry({
+        host,
+        publicKey,
+        secretKey,
+        operator,
+        runId,
+        taskId: task.id,
+        task: {
+          kind: task.kind,
+          label: task.label,
+          payload: task.payload,
+          procedure: procedure ? { id: procedure.id, version: procedure.version } : null,
+        },
+        environment: process.env.LANGFUSE_TRACING_ENVIRONMENT?.trim() || process.env.NODE_ENV || "development",
+        release: process.env.LANGFUSE_RELEASE?.trim() || undefined,
+      }),
   };
 }

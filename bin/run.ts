@@ -2,6 +2,7 @@
 
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { shutdownLangfuse } from "../src/agent/telemetry";
 import { CventApi } from "../src/cvent/api";
 import { LocalPlaywrightProvider, SteelProvider, type BrowserProvider } from "../src/browser/driver";
 import { executionOrder, plan } from "../src/planner/plan";
@@ -150,7 +151,16 @@ function numberEnv(name: string, fallback: number): number {
   return value;
 }
 
-main().catch((error) => {
-  console.error(`run failed: ${message(error)}`);
-  process.exitCode = 1;
-});
+main()
+  .catch((error) => {
+    console.error(`run failed: ${message(error)}`);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    try {
+      await shutdownLangfuse();
+    } catch (error) {
+      console.error(`Langfuse shutdown failed: ${message(error)}`);
+      process.exitCode = 1;
+    }
+  });
