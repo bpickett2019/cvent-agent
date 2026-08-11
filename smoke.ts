@@ -35,46 +35,46 @@ const raw = {
     },
     { key: "agenda", title: "Agenda", widgets: [{ type: "agenda", heading: "Full Schedule" }] },
   ],
+  registrationTypes: [
+    { key: "attendee", name: "Attendee" },
+    { key: "exhibitor", name: "Exhibitor" },
+  ],
+  questions: [
+    {
+      key: "attending-dinner",
+      text: "Will you attend the dinner?",
+      page: "show-questions",
+      order: 1,
+      answerType: "boolean",
+      required: true,
+      visibility: { type: "always" },
+    },
+    {
+      key: "dietary-needs",
+      text: "Select dietary needs",
+      page: "show-questions",
+      order: 2,
+      answerType: "multiSelect",
+      answerValues: ["Vegetarian", "Vegan", "Gluten-free"],
+      required: false,
+      visibility: {
+        type: "questionAnswer",
+        questionKey: "attending-dinner",
+        matchingValues: ["true"],
+      },
+    },
+    {
+      key: "booth-size",
+      text: "Select your booth size",
+      page: "exhibitor-details",
+      order: 3,
+      answerType: "singleSelect",
+      answerValues: ["10x10", "10x20"],
+      required: true,
+      visibility: { type: "registrationTypes", registrationTypeKeys: ["exhibitor"] },
+    },
+  ],
   registration: {
-    registrationTypes: [
-      { key: "attendee", name: "Attendee" },
-      { key: "exhibitor", name: "Exhibitor" },
-    ],
-    questions: [
-      {
-        key: "attending-dinner",
-        text: "Will you attend the dinner?",
-        page: "show-questions",
-        order: 1,
-        answerType: "boolean",
-        required: true,
-        visibility: { type: "always" },
-      },
-      {
-        key: "dietary-needs",
-        text: "Select dietary needs",
-        page: "show-questions",
-        order: 2,
-        answerType: "multiSelect",
-        answerValues: ["Vegetarian", "Vegan", "Gluten-free"],
-        required: false,
-        visibility: {
-          type: "questionAnswer",
-          questionKey: "attending-dinner",
-          matchingValues: ["true"],
-        },
-      },
-      {
-        key: "booth-size",
-        text: "Select your booth size",
-        page: "exhibitor-details",
-        order: 3,
-        answerType: "singleSelect",
-        answerValues: ["10x10", "10x20"],
-        required: true,
-        visibility: { type: "registrationTypes", registrationTypeKeys: ["exhibitor"] },
-      },
-    ],
     admissionItems: [
       { key: "full", name: "Full Conference Pass", price: 1295, capacity: 5000 },
       { key: "expo", name: "Expo Only", price: 0 },
@@ -110,7 +110,7 @@ const twoDefaults = structuredClone(raw) as typeof raw;
 check("two default paths rejected", !EventSpec.safeParse(twoDefaults).success);
 
 const unknownQuestion = structuredClone(raw);
-unknownQuestion.registration.questions[1].visibility = {
+unknownQuestion.questions[1].visibility = {
   type: "questionAnswer",
   questionKey: "does-not-exist",
   matchingValues: ["true"],
@@ -118,7 +118,7 @@ unknownQuestion.registration.questions[1].visibility = {
 check("question gated on unknown question rejected", !EventSpec.safeParse(unknownQuestion).success);
 
 const unknownRegistrationType = structuredClone(raw);
-unknownRegistrationType.registration.questions[2].visibility = {
+unknownRegistrationType.questions[2].visibility = {
   type: "registrationTypes",
   registrationTypeKeys: ["press"],
 };
@@ -128,18 +128,23 @@ check(
 );
 
 const laterQuestion = structuredClone(raw);
-laterQuestion.registration.questions[1].visibility = {
+laterQuestion.questions[1].visibility = {
   type: "questionAnswer",
   questionKey: "booth-size",
   matchingValues: ["10x10"],
 };
 check("question gated on later question rejected", !EventSpec.safeParse(laterQuestion).success);
 
+const duplicateQuestion = structuredClone(raw);
+duplicateQuestion.questions[1].key = duplicateQuestion.questions[0].key;
+check("duplicate question keys rejected", !EventSpec.safeParse(duplicateQuestion).success);
+
 console.log("\n[2] Planner");
 const p = plan(spec);
 const ordered = executionOrder(p);
 check("plan is acyclic and orderable", ordered.length === p.tasks.length, `${ordered.length} tasks`);
 check("spec hash is stable", plan(spec).specHash === p.specHash, p.specHash);
+check("event copy is the first API task", ordered[0]?.kind === "event.copy" && ordered[0].channel === "api");
 
 const idx = (id: string) => ordered.findIndex((t) => t.id === id);
 check("admission items precede their path", idx("reg.admission.full") < idx("reg.path.attendee"));
@@ -182,15 +187,16 @@ const verificationApi = {
     })),
   listVouchers: async () => spec.registration.vouchers.map((voucher) => ({ id: voucher.key, ...voucher })),
   listRegistrationTypes: async () =>
-    spec.registration.registrationTypes.map((registrationType) => ({ id: registrationType.key, ...registrationType })),
+    spec.registrationTypes.map((registrationType) => ({ id: registrationType.key, ...registrationType })),
   listQuestions: async () =>
-    spec.registration.questions.map(({ visibility: _visibility, ...question }) => ({ id: question.key, ...question })),
+    spec.questions.map(({ visibility: _visibility, ...question }) => ({ id: question.key, ...question })),
 } as unknown as CventApi;
 const report = await verify(verificationApi, EVENT_ID, spec, p.specHash);
 check("questions and registration types match API reads", report.passed);
 check(
-  "visibility read gap is explicit to the operator",
-  report.findings.some((finding) => finding.message.includes("does not expose question visibility rules"))
+  "every visibility read gap is explicit to the operator",
+  report.findings.filter((finding) => finding.message.includes("could not be verified programmatically")).length ===
+    spec.questions.length
 );
 
 console.log("\n[4] Guardrails");

@@ -248,8 +248,6 @@ export const AdvancedRule = z.object({
 });
 
 export const Registration = z.object({
-  registrationTypes: z.array(RegistrationType).default([]),
-  questions: z.array(Question).default([]),
   admissionItems: z.array(AdmissionItem).default([]),
   optionalItems: z.array(OptionalItem).default([]),
   vouchers: z.array(Voucher).default([]),
@@ -270,6 +268,8 @@ export const EventSpec = z
     header: Header.optional(),
     footer: Footer.optional(),
     pages: z.array(WebsitePage).min(1).optional(),
+    registrationTypes: z.array(RegistrationType).default([]),
+    questions: z.array(Question).default([]),
     registration: Registration,
   })
   .superRefine((spec, ctx) => {
@@ -289,11 +289,8 @@ export const EventSpec = z
     };
 
     dupe("page", (spec.pages ?? []).map((p) => p.key), ["pages"]);
-    dupe("registration type", spec.registration.registrationTypes.map((t) => t.key), [
-      "registration",
-      "registrationTypes",
-    ]);
-    dupe("question", spec.registration.questions.map((q) => q.key), ["registration", "questions"]);
+    dupe("registration type", spec.registrationTypes.map((t) => t.key), ["registrationTypes"]);
+    dupe("question", spec.questions.map((q) => q.key), ["questions"]);
     dupe("admission item", spec.registration.admissionItems.map((a) => a.key), [
       "registration",
       "admissionItems",
@@ -301,14 +298,14 @@ export const EventSpec = z
     dupe("registration path", spec.registration.paths.map((p) => p.key), ["registration", "paths"]);
 
     // Referential integrity — cheaper to catch here than mid-run in Cvent.
-    const registrationTypeKeys = new Set(spec.registration.registrationTypes.map((t) => t.key));
-    const questionsByKey = new Map(spec.registration.questions.map((q) => [q.key, q]));
-    spec.registration.questions.forEach((question, i) => {
+    const registrationTypeKeys = new Set(spec.registrationTypes.map((t) => t.key));
+    const questionsByKey = new Map(spec.questions.map((q) => [q.key, q]));
+    spec.questions.forEach((question, i) => {
       if (question.visibility.type === "registrationTypes") {
         question.visibility.registrationTypeKeys.forEach((key) => {
           if (!registrationTypeKeys.has(key)) {
             issue(
-              ["registration", "questions", i, "visibility", "registrationTypeKeys"],
+              ["questions", i, "visibility", "registrationTypeKeys"],
               `question "${question.key}" references unknown registration type "${key}"`
             );
           }
@@ -319,12 +316,12 @@ export const EventSpec = z
         const gatingQuestion = questionsByKey.get(question.visibility.questionKey);
         if (!gatingQuestion) {
           issue(
-            ["registration", "questions", i, "visibility", "questionKey"],
+            ["questions", i, "visibility", "questionKey"],
             `question "${question.key}" references unknown prior question "${question.visibility.questionKey}"`
           );
         } else if (gatingQuestion.order >= question.order) {
           issue(
-            ["registration", "questions", i, "visibility", "questionKey"],
+            ["questions", i, "visibility", "questionKey"],
             `conditioning question "${gatingQuestion.key}" must come earlier than question "${question.key}"`
           );
         }

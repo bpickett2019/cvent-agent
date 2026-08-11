@@ -145,7 +145,7 @@ export function plan(spec: EventSpec): Plan {
   const reg = spec.registration;
 
   const registrationTypeTasks = new Map(
-    reg.registrationTypes.map((registrationType) => [
+    spec.registrationTypes.map((registrationType) => [
       registrationType.key,
       push({
         id: `reg.type.${registrationType.key}`,
@@ -161,7 +161,7 @@ export function plan(spec: EventSpec): Plan {
 
   // Stable order plus explicit dependencies makes conditional chains safe even
   // when the input array itself is not sorted by question order.
-  const questions = [...reg.questions].sort((a, b) => a.order - b.order || a.key.localeCompare(b.key));
+  const questions = [...spec.questions].sort((a, b) => a.order - b.order || a.key.localeCompare(b.key));
   for (const question of questions) {
     const conditionalDependencies =
       question.visibility.type === "questionAnswer"

@@ -178,7 +178,7 @@ export async function verify(
   const registrationTypesByName = new Map(
     registrationTypes.map((type) => [type.name.trim().toLowerCase(), type])
   );
-  for (const want of spec.registration.registrationTypes) {
+  for (const want of spec.registrationTypes) {
     const nameMatch = registrationTypesByName.get(want.name.trim().toLowerCase());
     const got = registrationTypesByKey.get(want.key) ?? (nameMatch?.key ? undefined : nameMatch);
     if (!got) {
@@ -204,7 +204,7 @@ export async function verify(
     questions.flatMap((question) => (question.key ? [[question.key, question] as const] : []))
   );
   const questionsByText = new Map(questions.map((question) => [question.text.trim().toLowerCase(), question]));
-  for (const want of spec.registration.questions) {
+  for (const want of spec.questions) {
     const textMatch = questionsByText.get(want.text.trim().toLowerCase());
     const got = questionsByKey.get(want.key) ?? (textMatch?.key ? undefined : textMatch);
     if (!got) {
@@ -252,12 +252,13 @@ export async function verify(
     }
   }
 
-  if (spec.registration.questions.length > 0) {
+  for (const question of spec.questions) {
     add({
       severity: "warning",
       area: "registration",
       message:
-        "Cvent's API does not expose question visibility rules. Visibility was not independently verified; review each rule in the Cvent registration UI.",
+        `Cvent's API does not expose question visibility rules. The visibility rule for question ` +
+        `"${question.text}" (${question.key}) could not be verified programmatically; review it in the Cvent registration UI.`,
     });
   }
 
