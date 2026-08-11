@@ -24,6 +24,7 @@ Options:
 `;
 
 async function main(): Promise<void> {
+  loadLocalEnvironment();
   const args = parseArgs(process.argv.slice(2), {
     values: ["spec", "session", "resume", "run-dir", "operator-id", "operator-email"],
     flags: ["dry-run", "local", "headed", "help"],
@@ -134,6 +135,14 @@ async function loadSpec(path: string): Promise<EventSpecType> {
     throw new Error(`spec ${absolute} is invalid: ${issues}`);
   }
   return parsed.data;
+}
+
+function loadLocalEnvironment(): void {
+  try {
+    process.loadEnvFile(resolve(".env"));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
 }
 
 function csvEnv(name: string): string[] {
