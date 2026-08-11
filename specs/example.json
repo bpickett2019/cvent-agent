@@ -1,33 +1,73 @@
 {
   "specVersion": "1.0",
   "details": {
-    "name": "EmeraldX Theme Validation Event",
-    "description": "Minimal draft event for the first live theme validation run.",
+    "name": "Question delta dry run",
+    "description": "Clone the previous event and apply this year's registration question delta.",
     "timezone": "America/New_York",
     "start": "2027-06-15T09:00:00-04:00",
     "end": "2027-06-15T17:00:00-04:00",
-    "format": "virtual"
+    "format": "inPerson",
+    "templateEventId": "previous-year-event"
   },
-  "theme": {
-    "templateName": "Emerald Corporate",
-    "palette": {
-      "primary": "#0B7A4B"
-    }
-  },
-  "header": {},
-  "footer": {},
-  "pages": [
+  "registrationTypes": [
     {
-      "key": "home",
-      "title": "Home",
-      "widgets": []
+      "key": "attendee",
+      "name": "Attendee"
+    },
+    {
+      "key": "exhibitor",
+      "name": "Exhibitor"
     }
   ],
-  "registration": {
-    "admissionItems": [],
-    "optionalItems": [],
-    "vouchers": [],
-    "paths": [],
-    "advancedRules": []
-  }
+  "questions": [
+    {
+      "key": "attending-dinner",
+      "text": "Will you attend the dinner?",
+      "page": "show-questions",
+      "order": 1,
+      "answerType": "boolean",
+      "required": true,
+      "visibility": {
+        "type": "always"
+      }
+    },
+    {
+      "key": "dietary-needs",
+      "text": "Select dietary needs",
+      "page": "show-questions",
+      "order": 2,
+      "answerType": "multiSelect",
+      "answerValues": [
+        "Vegetarian",
+        "Vegan"
+      ],
+      "required": false,
+      "visibility": {
+        "type": "questionAnswer",
+        "questionKey": "attending-dinner",
+        "matchingValues": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "booth-size",
+      "text": "Select booth size",
+      "page": "exhibitor-details",
+      "order": 3,
+      "answerType": "singleSelect",
+      "answerValues": [
+        "10x10",
+        "10x20"
+      ],
+      "required": true,
+      "visibility": {
+        "type": "registrationTypes",
+        "registrationTypeKeys": [
+          "exhibitor"
+        ]
+      }
+    }
+  ],
+  "registration": {}
 }
