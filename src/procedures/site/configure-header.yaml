@@ -1,0 +1,26 @@
+id: site/configure-header
+version: 1
+goal: >
+  Configure the website header to match the title, subtitle, visibility flags,
+  logo, and banner image supplied in the event specification.
+preconditions:
+  - Event exists and is bound to the run's event id
+  - The event website designer is available
+steps:
+  - description: Open the website header editor
+    selectorHint: "TODO"
+  - description: Apply the exact header configuration {{header}}
+    selectorHint: "TODO"
+  - description: Save the header and confirm the configured values remain visible
+    selectorHint: "TODO"
+idempotency:
+  check: "The saved header configuration exactly equals {{header}}"
+failureModes:
+  - symptom: "A requested logo or banner asset cannot be resolved"
+    action: "Halt and name the missing asset; do not substitute another image."
+  - symptom: "The header changes do not persist after saving"
+    action: "Retry the save once, then halt with the values that did not persist."
+provenance:
+  authoredBy: human
+  validatedAgainst: null
+  lastReviewed: null

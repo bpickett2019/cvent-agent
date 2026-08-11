@@ -1,0 +1,26 @@
+id: site/capture-screenshots
+version: 1
+goal: >
+  Capture review evidence for every configured website page without changing
+  the site or publishing the event.
+preconditions:
+  - Event exists and remains in Draft
+  - All pages in {{pageKeys}} have completed their configuration tasks
+steps:
+  - description: Open the website preview for the current Draft event
+    selectorHint: "TODO"
+  - description: Visit each page key in {{pageKeys}} and wait for its visible content to settle
+    selectorHint: "TODO"
+  - description: Capture a full-page screenshot for each page key and retain it as run evidence
+    selectorHint: "TODO"
+idempotency:
+  check: "The current run has a readable screenshot for every page key in {{pageKeys}}"
+failureModes:
+  - symptom: "A requested page cannot be opened in preview"
+    action: "Halt and report the missing page key; do not capture a different page."
+  - symptom: "A page is still loading or visibly incomplete"
+    action: "Wait once for the page to settle, then halt rather than retain misleading evidence."
+provenance:
+  authoredBy: human
+  validatedAgainst: null
+  lastReviewed: null

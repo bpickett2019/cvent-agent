@@ -1,0 +1,28 @@
+id: registration/create-advanced-rule
+version: 1
+goal: >
+  Ensure one advanced registration rule exists with the requested key,
+  description, condition object, and outcome object.
+preconditions:
+  - Event exists and is bound to the run's event id
+  - Required admission items and registration paths have been configured
+steps:
+  - description: Open the advanced registration rule manager
+    selectorHint: "TODO"
+  - description: Find advanced rule key {{rule.key}} or begin creating it if absent
+    selectorHint: "TODO"
+  - description: Apply the exact advanced rule configuration {{rule}}
+    selectorHint: "TODO"
+  - description: Save and confirm both the when conditions and then outcomes
+    selectorHint: "TODO"
+idempotency:
+  check: "A single advanced rule with key {{rule.key}} exists and its description, when object, and then object equal {{rule}}"
+failureModes:
+  - symptom: "A condition or outcome in the specification has no Cvent equivalent"
+    action: "Halt and report the unsupported field; do not approximate the rule."
+  - symptom: "A rule with the requested key exists with different logic"
+    action: "Halt and report the conflict before changing consequential registration logic."
+provenance:
+  authoredBy: human
+  validatedAgainst: null
+  lastReviewed: null

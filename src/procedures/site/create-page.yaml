@@ -1,0 +1,28 @@
+id: site/create-page
+version: 1
+goal: >
+  Ensure the specified website page exists with the requested stable key,
+  title, optional slug, and navigation visibility.
+preconditions:
+  - Event exists and is bound to the run's event id
+  - The event website theme has been applied
+steps:
+  - description: Open the website page manager
+    selectorHint: "TODO"
+  - description: Find the page with key {{page.key}} or begin creating it if absent
+    selectorHint: "TODO"
+  - description: Apply the exact page configuration {{page}}
+    selectorHint: "TODO"
+  - description: Save the page and confirm its title and navigation state
+    selectorHint: "TODO"
+idempotency:
+  check: "A single page with key {{page.key}} exists and its saved configuration equals {{page}}"
+failureModes:
+  - symptom: "A page with the requested key exists with conflicting settings"
+    action: "Update that page to the specification; do not create a duplicate."
+  - symptom: "Cvent rejects the requested slug"
+    action: "Halt and report the requested slug and Cvent validation message."
+provenance:
+  authoredBy: human
+  validatedAgainst: null
+  lastReviewed: null

@@ -1,0 +1,28 @@
+id: registration/create-voucher
+version: 1
+goal: >
+  Ensure one voucher exists with the requested key, code, discount type, amount,
+  optional maximum uses, and admission-item assignments.
+preconditions:
+  - Event exists and is bound to the run's event id
+  - Every admission item key in {{voucher.appliesTo}} already exists when the list is non-empty
+steps:
+  - description: Open the voucher manager
+    selectorHint: "TODO"
+  - description: Find voucher key {{voucher.key}} or code {{voucher.code}} or begin creating it if absent
+    selectorHint: "TODO"
+  - description: Apply the exact voucher configuration {{voucher}}
+    selectorHint: "TODO"
+  - description: Save and confirm its code, discount, usage limit, and item assignments
+    selectorHint: "TODO"
+idempotency:
+  check: "A single voucher with key {{voucher.key}} and code {{voucher.code}} exists and its configuration equals {{voucher}}"
+failureModes:
+  - symptom: "The voucher code already exists with different settings"
+    action: "Halt and report the conflicting settings; do not create another code."
+  - symptom: "A requested admission item is unavailable for assignment"
+    action: "Halt and report the missing key; do not broaden voucher applicability."
+provenance:
+  authoredBy: human
+  validatedAgainst: null
+  lastReviewed: null

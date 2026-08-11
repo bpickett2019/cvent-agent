@@ -1,0 +1,28 @@
+id: registration/create-admission-item
+version: 1
+goal: >
+  Ensure one admission item exists with the requested key, name, description,
+  optional capacity, price, and currency.
+preconditions:
+  - Event exists and is bound to the run's event id
+  - Registration configuration is available for the Draft event
+steps:
+  - description: Open the admission item manager
+    selectorHint: "TODO"
+  - description: Find admission item key {{item.key}} or begin creating it if absent
+    selectorHint: "TODO"
+  - description: Apply the exact admission item configuration {{item}}
+    selectorHint: "TODO"
+  - description: Save and confirm the item name, capacity, price, and currency
+    selectorHint: "TODO"
+idempotency:
+  check: "A single admission item with key {{item.key}} exists and its configuration equals {{item}}"
+failureModes:
+  - symptom: "An item with the requested name exists under a different identity"
+    action: "Halt and report the conflict; do not create a likely duplicate."
+  - symptom: "Cvent rejects the requested price, currency, or capacity"
+    action: "Halt and report the exact field and validation message."
+provenance:
+  authoredBy: human
+  validatedAgainst: null
+  lastReviewed: null

@@ -1,0 +1,26 @@
+id: site/configure-footer
+version: 1
+goal: >
+  Configure the website footer text, social links, and contact email exactly as
+  supplied in the event specification.
+preconditions:
+  - Event exists and is bound to the run's event id
+  - The event website designer is available
+steps:
+  - description: Open the website footer editor
+    selectorHint: "TODO"
+  - description: Apply the exact footer configuration {{footer}}
+    selectorHint: "TODO"
+  - description: Save the footer and confirm the configured values remain visible
+    selectorHint: "TODO"
+idempotency:
+  check: "The saved footer text, social links, and contact email exactly equal {{footer}}"
+failureModes:
+  - symptom: "Cvent rejects a supplied social or contact link"
+    action: "Halt and report the rejected field and value; do not rewrite it."
+  - symptom: "The footer changes do not persist after saving"
+    action: "Retry the save once, then halt with the values that did not persist."
+provenance:
+  authoredBy: human
+  validatedAgainst: null
+  lastReviewed: null

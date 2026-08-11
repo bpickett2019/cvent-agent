@@ -1,0 +1,28 @@
+id: registration/create-path
+version: 1
+goal: >
+  Ensure one registration path exists with the requested key, name, linked
+  admission item keys, default status, and approval requirement.
+preconditions:
+  - Event exists and is bound to the run's event id
+  - Every admission item key in {{path.admissionItemKeys}} already exists
+steps:
+  - description: Open the registration path manager
+    selectorHint: "TODO"
+  - description: Find registration path key {{path.key}} or begin creating it if absent
+    selectorHint: "TODO"
+  - description: Apply the exact registration path configuration {{path}}
+    selectorHint: "TODO"
+  - description: Save and confirm its linked admission items, default state, and approval state
+    selectorHint: "TODO"
+idempotency:
+  check: "A single registration path with key {{path.key}} exists and its configuration equals {{path}}"
+failureModes:
+  - symptom: "A referenced admission item is not available to link"
+    action: "Halt and report the missing admission item key; do not omit it."
+  - symptom: "Cvent refuses the requested default-path setting"
+    action: "Halt and report the current default path and validation message."
+provenance:
+  authoredBy: human
+  validatedAgainst: null
+  lastReviewed: null

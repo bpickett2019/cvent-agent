@@ -10,7 +10,7 @@
  * the Page object, the deny-list would be advisory.
  */
 
-import type { Browser, Page } from "playwright";
+import type { Browser, BrowserContext, Page } from "playwright";
 import { chromium } from "playwright";
 import { Guardrails, type Action } from "../guardrails/middleware";
 
@@ -64,13 +64,39 @@ export class SteelProvider implements BrowserProvider {
 /* ---------------------------------------------------- local Playwright ------ */
 /* The documented fallback. Also what CI runs against.                          */
 
+export interface LocalPlaywrightOptions {
+  headless?: boolean;
+  sessionContext?: SteelConfig["sessionContext"];
+}
+
 export class LocalPlaywrightProvider implements BrowserProvider {
   readonly name = "playwright-local";
-  constructor(private readonly opts: { headless?: boolean } = {}) {}
+  constructor(private readonly opts: LocalPlaywrightOptions = {}) {}
 
   async connect() {
     const browser = await chromium.launch({ headless: this.opts.headless ?? true });
-    return { browser, release: async () => void (await browser.close().catch(() => {})) };
+    try {
+      if (this.opts.sessionContext) {
+        const context = await browser.newContext();
+        const cookies = this.opts.sessionContext.cookies as Parameters<BrowserContext["addCookies"]>[0];
+        if (cookies.length) await context.addCookies(cookies);
+        const localStorage = this.opts.sessionContext.localStorage;
+        if (localStorage) {
+          await context.addInitScript((entries: Record<string, string>) => {
+            try {
+              for (const [key, value] of Object.entries(entries)) window.localStorage.setItem(key, value);
+            } catch {
+              // Some non-web origins do not expose localStorage. The script runs
+              // again when the context reaches the captured Cvent origin.
+            }
+          }, localStorage);
+        }
+      }
+      return { browser, release: async () => void (await browser.close().catch(() => {})) };
+    } catch (error) {
+      await browser.close().catch(() => {});
+      throw error;
+    }
   }
 }
 

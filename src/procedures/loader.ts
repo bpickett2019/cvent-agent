@@ -100,6 +100,15 @@ export function parseProcedure(source: string, payload: Record<string, unknown>,
     throw new Error(`${sourceName}: invalid procedure: ${issues}`);
   }
 
+  const stubStep = parsed.data.steps.findIndex(
+    (step) => step.selectorHint !== undefined && /\bTODO\b/i.test(step.selectorHint)
+  );
+  if (stubStep !== -1) {
+    throw new Error(
+      `${sourceName}: unresolved TODO selectorHint at steps.${stubStep}.selectorHint; validate this procedure against Cvent before running it`
+    );
+  }
+
   try {
     return ProcedureSchema.parse(interpolate(parsed.data, payload));
   } catch (error) {

@@ -1,0 +1,28 @@
+id: registration/create-optional-item
+version: 1
+goal: >
+  Ensure one optional item exists with the requested key, name, price, optional
+  capacity, and admission-item availability.
+preconditions:
+  - Event exists and is bound to the run's event id
+  - Every admission item key in {{item.availableTo}} already exists when the list is non-empty
+steps:
+  - description: Open the optional item manager
+    selectorHint: "TODO"
+  - description: Find optional item key {{item.key}} or begin creating it if absent
+    selectorHint: "TODO"
+  - description: Apply the exact optional item configuration {{item}}
+    selectorHint: "TODO"
+  - description: Save and confirm its price, capacity, and availability assignments
+    selectorHint: "TODO"
+idempotency:
+  check: "A single optional item with key {{item.key}} exists and its configuration equals {{item}}"
+failureModes:
+  - symptom: "A requested admission item is not available for assignment"
+    action: "Halt and report the missing admission item key; do not broaden availability."
+  - symptom: "An optional item with the requested name already exists under a different identity"
+    action: "Halt and report the conflict; do not create a likely duplicate."
+provenance:
+  authoredBy: human
+  validatedAgainst: null
+  lastReviewed: null

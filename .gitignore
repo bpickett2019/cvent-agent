@@ -29,4 +29,7 @@ crash.log
 # Runtime artifacts
 artifacts/
 logs/
+.runs/
+session.json
+discovered.json
 *.log

@@ -1,0 +1,33 @@
+{
+  "specVersion": "1.0",
+  "details": {
+    "name": "EmeraldX Theme Validation Event",
+    "description": "Minimal draft event for the first live theme validation run.",
+    "timezone": "America/New_York",
+    "start": "2027-06-15T09:00:00-04:00",
+    "end": "2027-06-15T17:00:00-04:00",
+    "format": "virtual"
+  },
+  "theme": {
+    "templateName": "Emerald Corporate",
+    "palette": {
+      "primary": "#0B7A4B"
+    }
+  },
+  "header": {},
+  "footer": {},
+  "pages": [
+    {
+      "key": "home",
+      "title": "Home",
+      "widgets": []
+    }
+  ],
+  "registration": {
+    "admissionItems": [],
+    "optionalItems": [],
+    "vouchers": [],
+    "paths": [],
+    "advancedRules": []
+  }
+}
