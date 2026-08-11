@@ -1,66 +1,85 @@
-# Cvent Agent
+# EmeraldX Agent — Spine
 
-A persistent, UI-driven agent for automating Cvent workflows through official Cvent APIs and Steel.dev browser sessions. The target deployment environment is Microsoft Azure, with Langfuse providing agent observability and evaluation.
+Deterministic core of the Cvent configuration agent. Everything here runs
+without a Cvent account, an Azure subscription, or a browser. `npx tsx smoke.ts`
+proves it.
 
-> This repository currently contains the product and technical foundation. Runtime implementation will follow.
+## Design commitments
 
-## Goals
+**The Event Spec is the only contract.** The intake form is validated into an
+`EventSpec`; planner, executor, and verifier read nothing else. Field coverage
+in `src/spec/eventSpec.ts` *is* the Week 3 gate with Emerald — if a
+configuration element is not expressible there, the agent cannot produce it.
 
-- Provide a conversational UI for creating and monitoring Cvent tasks.
-- Continue long-running tasks after the user closes the UI.
-- Prefer official Cvent APIs; use browser automation only where needed.
-- Stream progress, browser evidence, and approval requests to users.
-- Maintain auditable, reproducible agent versions.
-- Improve through evaluated and human-approved releases rather than unrestricted live self-modification.
+**Planning is deterministic.** `plan(spec)` is a pure function. Same spec, same
+task DAG, same `specHash`. No model call decides which tasks exist. Pi's
+judgment is confined to individual browser tasks — drag-and-drop, unexpected
+modals, ambiguous widget placement.
 
-## Proposed stack
+**Guardrails sit below Pi.** The agent emits `Action` intents;
+`Guardrails.check()` decides whether they execute. Nothing above
+`src/browser/driver.ts` touches Playwright. If the agent could reach the `Page`
+object, the deny-list would be advisory rather than enforced.
 
-- **UI:** Next.js with Microsoft Entra ID authentication
-- **Agent API/worker:** TypeScript or Python on Azure Container Apps
-- **Task orchestration:** Azure Service Bus and Durable Functions or Container Apps Jobs
-- **Browser automation:** Steel.dev
-- **Cvent integration:** Official REST APIs, with browser fallback
-- **Observability and evaluation:** Langfuse and Azure Application Insights
-- **State:** Azure Database for PostgreSQL
-- **Artifacts:** Azure Blob Storage
-- **Secrets:** Azure Key Vault and Managed Identity
-- **Model:** Azure OpenAI or another client-approved provider
-- **Infrastructure:** Terraform
+**The executor does not grade itself.** Verification reads back through the
+Cvent REST API — a different channel from the browser that performed the
+writes. That is what makes the Draft-status post-check credible to an auditor.
 
-## Documentation
+**No self-modification.** Adaptation lives in `src/procedures/*.yaml` — versioned
+data, diffable, merged by a human. Proposed updates from a run land as a PR.
+Production runs a pinned build.
 
-- [Agent specification](docs/agent-specification.md)
-- [Architecture](docs/architecture.md)
-- [Deployment and release process](docs/deployment.md)
-- [Security policy](SECURITY.md)
+## Layout
 
-## Planned repository layout
-
-```text
-apps/
-  web/             # User interface
-  api/             # Agent and task API
-  worker/          # Durable tool execution
-agent/
-  prompts/
-  policies/
-  tools/
-  workflows/
-  memory/
-  evaluations/
-integrations/
-  cvent/
-  steel/
-  langfuse/
-infra/
-  terraform/
-docs/
+```
+src/spec/eventSpec.ts        The contract. Zod schema + referential integrity.
+src/planner/plan.ts          EventSpec -> ordered task DAG. Pure, testable.
+src/guardrails/middleware.ts Deny-list, event-ID validation, publish
+                             prohibition, attendee isolation, cost ceiling.
+src/browser/driver.ts        Steel.dev + local Playwright behind one interface.
+src/cvent/api.ts             REST client. Writes events; reads everything else.
+src/verify/verifier.ts       Spec vs. actual diff. Operator-readable output.
+src/procedures/              Browser procedures as versioned data.
 ```
 
-## Core principle
+## Cvent API coverage
 
-The production process is immutable and does not silently rewrite itself. It may analyze traces, propose changes, run evaluations, and produce a candidate release. Promotion requires policy checks and human approval, preserving auditability and rollback.
+| Surface | Channel | Notes |
+|---|---|---|
+| Event create / copy / update | **API** | `event/events:write` |
+| Discounts | **API** | write scope exists |
+| Admission items, paths, fees, vouchers, questions | **API read / browser write** | no write scopes found |
+| Theme, header, footer, pages, widgets | **Browser only** | no API surface at all |
 
-## Status
+The read surface carries the project: it powers verification *and* the
+idempotency checks that make "retries resume from the failed step" true rather
+than aspirational.
 
-Initial architecture and deployment planning.
+## Verify in Week 1, before trusting any of this
+
+1. Pull the OpenAPI spec with Emerald's credentials. Public docs are
+   JS-rendered and the scope inventory may be incomplete.
+2. Confirm `event/events:write` is grantable in Emerald's account, and whether
+   IT will approve a machine-to-machine app at all (CAB-adjacent).
+3. Confirm the account's API tier and rate limits.
+4. Confirm `POST /events/{id}/copy` exists and its request shape — template
+   cloning is acceptance criterion #2 and is currently assumed.
+5. Confirm the `status` enum value for Draft on `GET /events/{id}`.
+
+## Blocked, deliberately
+
+Real selectors (Week 4 sandbox), intake form fields (Week 1 ops interviews),
+deny-list contents (Emerald supplies Week 3), Azure IaC (tickets filed Week 0).
+
+Writing browser automation against assumed DOM today is exactly the work that
+Week 5 first contact invalidates. The procedure format is built; the procedures
+are not.
+
+## Security note carried forward
+
+An API application is a standing credential, which sits in tension with
+"the agent never holds standing credentials of its own." Recommendation: a
+**read-only** verification credential, all writes through the operator's
+captured browser session. That reads as a control strengthening rather than a
+weakening. `event/events:write` for template cloning is a separate ask and
+should be explicit with Dane, not folded into a scope list.

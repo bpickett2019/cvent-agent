@@ -11,7 +11,7 @@
 - Azure Application Insights for infrastructure telemetry
 - Langfuse for model, prompt, and tool traces and evaluations
 - Steel.dev for remote browser sessions
-- Azure OpenAI or another client-approved model provider
+- Anthropic enterprise API for model inference
 
 Container Apps is preferred over AKS for the initial release to reduce operational overhead.
 
