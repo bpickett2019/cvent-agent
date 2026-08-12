@@ -32,4 +32,7 @@ logs/
 .runs/
 session.json
 discovered.json
+discovered/
+.explore/
+.playwright/
 *.log
