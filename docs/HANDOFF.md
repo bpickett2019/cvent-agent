@@ -24,7 +24,15 @@ a342bb7 Build EmeraldX Anthropic task executor
 9e13f01 Initialize Cvent Agent architecture
 ```
 
-No real Cvent event has been created by this code yet. The attempted live run stopped before side effects because Cvent API credentials were missing.
+No real Cvent event has been created by this code yet. Cvent API credentials have been requested from Emerald but have not been received, so API authentication and contract validation are blocked and deliberately deferred.
+
+## Current delivery pivot
+
+The immediate client-demo priority is now the operator-facing dashboard: intake, run review, and triage using the existing EventSpec/planner/verifier contracts and mocked run results. This UI can be demonstrated without a Cvent connection while API access and browser procedures remain blocked.
+
+Selector discovery is prepared as a capture-only headed Playwright workflow in `bin/explore.ts`. The operator drives Cvent manually; touching `capture-now` records the current accessibility tree and refreshes a portable `session.json`. The approved capture-only workflow has not yet completed a selector-validation run. No selectors should be inferred from memory, documentation, or videos.
+
+All 15 original TODO procedure files remain unresolved, as do the three new registration procedure scaffolds for questions, visibility, and registration types (18 TODO-bearing files total). None is executable until validated from an approved live capture.
 
 ## What works now
 
@@ -48,8 +56,10 @@ npx tsx bin/capture-session.ts
 # Discover interactive controls on a real Cvent page
 npx tsx bin/discover.ts --url "<sandbox designer URL>" --session ./session.json
 
-# Watch navigation and continually refresh discovered.json
-npx tsx bin/discover.ts --url "<sandbox designer URL>" --session ./session.json --watch
+# Capture accessibility trees while the operator drives the headed browser
+npx tsx bin/explore.ts
+# In another terminal, once the desired panel is visible:
+touch capture-now
 
 # Validate and inspect the deterministic plan without side effects
 npx tsx bin/run.ts --dry-run --spec ./specs/example.json
@@ -120,8 +130,8 @@ Do not put values in this table.
 | `ANTHROPIC_API_KEY` | Present in the current shell, not `.env` | Model execution |
 | `EMERALDX_MODEL_ID` | Missing | Model selection |
 | `EMERALDX_OPERATOR` | Missing; CLI flags can supply identity | Audit attribution |
-| `CVENT_CLIENT_ID` | Missing | Event shell and API verification |
-| `CVENT_CLIENT_SECRET` | Missing | Event shell and API verification |
+| `CVENT_CLIENT_ID` | Requested from Emerald; not received | Event shell and API verification |
+| `CVENT_CLIENT_SECRET` | Requested from Emerald; not received | Event shell and API verification |
 | `CVENT_API_BASE_URL` | Optional/default provisional | Regional Cvent API |
 | `STEEL_API_KEY` | Missing and not needed with `--local` | Hosted Steel runs |
 
@@ -129,9 +139,9 @@ Do not ask users to paste secrets into chat. Have them place credentials in `.en
 
 ## Critical blockers to the first real run
 
-### 1. Cvent API access is absent
+### 1. Cvent API access is absent and validation is deferred
 
-The orchestrator creates/copies the event shell via `CventApi` before opening the browser. A captured browser session does not replace `CVENT_CLIENT_ID` and `CVENT_CLIENT_SECRET`.
+Credentials have been requested from Emerald but have not yet been received. The orchestrator creates/copies the event shell via `CventApi` before opening the browser. A captured browser session does not replace `CVENT_CLIENT_ID` and `CVENT_CLIENT_SECRET`. Do not spend demo work on live API validation until Emerald supplies the application credentials.
 
 The request/response shapes and scopes in `src/cvent/api.ts` remain provisional. Confirm against the account's current OpenAPI contract before trusting a write. At minimum validate:
 
@@ -148,7 +158,7 @@ Choose a currently available Anthropic model and configure `EMERALDX_MODEL_ID`. 
 
 ### 3. Real Cvent selectors are absent
 
-Fifteen procedure files intentionally contain `selectorHint: "TODO"`; the loader rejects them with a filename and step number so stubs cannot execute:
+The 15 original procedure files intentionally contain `selectorHint: "TODO"`; the loader rejects them with a filename and step number so stubs cannot execute:
 
 ```text
 registration/create-admission-item
@@ -168,6 +178,14 @@ site/widget-text
 site/widget-video
 ```
 
+The three registration-delta scaffolds also remain unresolved:
+
+```text
+registration/create-question
+registration/set-question-visibility
+registration/create-registration-type
+```
+
 `site/apply-theme.yaml` has non-TODO example selectors, but its own comments say they are placeholders and it has **not** been validated against the sandbox. Treat it as unknown too.
 
 The minimal `specs/example.json` still plans header, footer, one page, and screenshots because those are required by EventSpec/planner. Therefore it is not currently possible to get a successful “theme-only” run merely by validating `apply-theme`; the header, footer, page, and screenshot procedures must also be validated or the planning contract must be deliberately redesigned.
@@ -178,19 +196,13 @@ Use the real event designer URL with `bin/discover.ts`. Do not invent selectors.
 
 ## Recommended next sequence
 
-1. **Push the three local commits** so the handoff is durable remotely.
-2. Configure Cvent API credentials and `EMERALDX_MODEL_ID` without exposing values.
-3. Verify API authentication read-only first.
-4. Confirm the event create/copy/update shapes against current Cvent docs or a harmless sandbox request.
-5. Recapture `session.json` if the current session is stale.
-6. Obtain the exact sandbox event designer URL.
-7. Run discovery in `--watch` mode through theme, header, footer, page manager, preview, and registration screens.
-8. Validate the minimum five site procedures required by `specs/example.json`: apply theme, header, footer, create page, screenshots.
-9. Replace only observed selector hints, set `validatedAgainst`, and preserve role/name selectors where stable.
-10. Run each procedure against an existing disposable Draft event before allowing event creation.
-11. Run the complete example spec locally, inspect `.runs/<runId>.json`, the verification report, Draft status, and the Langfuse session.
-12. Test an interrupted run and `--resume` before calling the runnable surface MVP-ready.
-13. Expand to widgets and registration procedures only after the minimal site run is reliable.
+1. Build and demo the operator-facing dashboard against EventSpec and realistic mocked run results.
+2. Keep live Cvent API validation deferred until Emerald supplies client credentials.
+3. Run `bin/explore.ts` only against an explicitly approved disposable event; the operator drives and the tool captures only.
+4. Replace TODO selectors only from approved live accessibility captures, with provenance recorded per procedure.
+5. Validate question, visibility, and registration-type procedures before lower-priority site procedures.
+6. Once credentials arrive, verify API authentication read-only and confirm copy/update/read contracts before any write.
+7. Run one disposable Draft event end to end, inspect verification and Langfuse, then test interruption and resume.
 
 ## MVP readiness assessment
 
