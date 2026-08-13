@@ -40,6 +40,8 @@ export interface GuardrailConfig {
   /** The one event this run may touch. Sourced from the API create/copy response. */
   eventId: string;
   denyList: DenyList;
+  /** Exact server-resolved files this run may upload. Empty is fail-closed. */
+  allowedUploadPaths?: string[];
   costCeilingUsd: number;
   costAlertUsd: number;
 }
@@ -69,8 +71,16 @@ const PERMANENT = {
     "delete-event",
     "[data-cvent-action='publish']",
   ],
+  attendeeSelectorPatterns: [
+    /(?:name|text|label|title)=['\"]?(?:attendees?|registrants?|invitees?|contacts?)/i,
+    /href\*?=['\"][^'\"]*\/(?:attendees?|registrants?|invitees?|contacts?|address-book)/i,
+    /data-cvent-(?:area|page)=['\"](?:attendees?|registrants?|invitees?|contacts?)/i,
+  ],
   urlFragments: [
     "/publish",
+    "/go-live",
+    "/golive",
+    "/launch-event",
     "/attendees",
     "/registrants",
     "/invitees",
@@ -80,7 +90,7 @@ const PERMANENT = {
   ],
 } as const;
 
-const norm = (s: string) => s.toLowerCase().replace(/\s+/g, "");
+const norm = (s: string) => safelyDecode(s).toLowerCase().replace(/\s+/g, "");
 
 export class Guardrails {
   private spentUsd = 0;
@@ -96,6 +106,7 @@ export class Guardrails {
     this.checkPermanent(action);
     this.checkEventId(action);
     this.checkDenyList(action);
+    this.checkUpload(action);
     this.checkBudget(action);
   }
 
@@ -119,11 +130,18 @@ export class Guardrails {
       const s = norm(action.selector);
       const hit = PERMANENT.selectorFragments.find((f) => s.includes(norm(f)));
       if (hit) this.deny("permanent.selector", action, `selector matches prohibited control "${hit}"`);
+      const attendeeHit = PERMANENT.attendeeSelectorPatterns.find((pattern) => pattern.test(s));
+      if (attendeeHit) {
+        this.deny("attendee.selector", action, "selector targets a prohibited attendee-data control");
+      }
     }
     if (action.url) {
-      const u = action.url.toLowerCase();
+      const u = norm(action.url);
       const hit = PERMANENT.urlFragments.find((f) => u.includes(f));
       if (hit) this.deny("permanent.url", action, `navigation to prohibited area "${hit}"`);
+      if (/[?&](?:action|mode|step|view)=(?:publish|go-?live|launch)(?:[&#]|$)/i.test(u)) {
+        this.deny("permanent.url", action, "navigation targets a prohibited publish flow");
+      }
     }
   }
 
@@ -136,7 +154,8 @@ export class Guardrails {
     if (!action.url) return;
     const ids = extractEventIds(action.url);
     if (ids.length === 0) return;
-    if (!ids.every((id) => id === this.cfg.eventId)) {
+    const expected = this.cfg.eventId.toLowerCase();
+    if (!ids.every((id) => id.toLowerCase() === expected)) {
       this.deny(
         "eventId.mismatch",
         action,
@@ -154,6 +173,15 @@ export class Guardrails {
     if (action.url) {
       const hit = this.cfg.denyList.urlPatterns.find((p) => matchesPattern(action.url!, p));
       if (hit) this.deny("denyList.url", action, `url on deny-list: "${hit}"`);
+    }
+  }
+
+  private checkUpload(action: Action) {
+    if (action.type !== "upload") return;
+    if (!action.value) this.deny("upload.missing", action, "upload action has no resolved asset path");
+    const allowed = new Set(this.cfg.allowedUploadPaths ?? []);
+    if (!allowed.has(action.value)) {
+      this.deny("upload.unapproved", action, "upload path was not resolved from an approved run asset");
     }
   }
 
@@ -185,14 +213,16 @@ export class Guardrails {
 export function extractEventIds(url: string): string[] {
   const found = new Set<string>();
   const guid = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+  const decoded = safelyDecode(url);
 
-  for (const m of url.matchAll(/\/events?\/([^/?#]+)/gi)) {
+  for (const m of decoded.matchAll(/\/events?\/([^/?#]+)/gi)) {
     if (guid.test(m[1])) found.add(m[1].toLowerCase());
     guid.lastIndex = 0;
   }
   try {
-    const qs = new URL(url).searchParams;
-    for (const key of ["eventId", "eventid", "id", "e"]) {
+    const qs = new URL(decoded).searchParams;
+    // `evtstub` is the authoritative event UUID used by Cvent's planner UI.
+    for (const key of ["eventId", "eventid", "evtstub", "id", "e"]) {
       const v = qs.get(key);
       if (v && guid.test(v)) found.add(v.toLowerCase());
       guid.lastIndex = 0;
@@ -209,5 +239,13 @@ export function matchesPattern(url: string, pattern: string): boolean {
     "^" + pattern.split("*").map((p) => p.replace(/[.+?^${}()|[\]\\]/g, "\\$&")).join(".*"),
     "i"
   );
-  return rx.test(url);
+  return rx.test(safelyDecode(url));
+}
+
+function safelyDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }

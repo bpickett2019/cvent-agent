@@ -6,7 +6,14 @@
     "typecheck": "tsc --noEmit",
     "smoke": "tsx smoke.ts",
     "smoke:executor": "tsx executor.smoke.ts",
-    "smoke:run": "tsx run.smoke.ts"
+    "smoke:run": "tsx run.smoke.ts",
+    "smoke:queue": "tsx queue.smoke.ts",
+    "smoke:assets": "tsx asset.smoke.ts",
+    "smoke:rr": "tsx rr.smoke.ts",
+    "smoke:browser": "tsx browser.smoke.ts",
+    "smoke:control": "tsx control.smoke.ts",
+    "test": "npm run typecheck && npm run smoke && npm run smoke:executor && npm run smoke:run && npm run smoke:queue && npm run smoke:assets && npm run smoke:rr && npm run smoke:browser && npm run smoke:control",
+    "worker": "tsx bin/worker.ts"
   },
   "dependencies": {
     "@earendil-works/pi-agent-core": "0.84.1",

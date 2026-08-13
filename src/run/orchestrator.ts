@@ -66,6 +66,11 @@ export interface RunResult {
   triageSummary: string;
 }
 
+export interface ExecutionControl {
+  /** Wait while paused; throw on cancellation. Called before tasks and actions. */
+  waitUntilRunnable(): Promise<void>;
+}
+
 export interface RunEventArgs {
   spec: EventSpec;
   operator: { id: string; email: string };
@@ -73,6 +78,14 @@ export interface RunEventArgs {
   api: CventApi;
   browserProvider: BrowserProvider;
   denyList: DenyList;
+  /** Uploaded asset ids resolved by trusted server code before model execution. */
+  assetPaths?: Record<string, string>;
+  executionControl?: ExecutionControl;
+  onBrowserConnected?: (details: {
+    provider: string;
+    viewerUrl?: string;
+    providerSessionId?: string;
+  }) => Promise<void>;
   costCeilingUsd: number;
   costAlertUsd: number;
   resumeRunId?: string;
@@ -138,6 +151,9 @@ export function createRunOrchestrator(overrides: Partial<OrchestratorDependencie
     const shellTask = ordered.find((task) => task.id === "event.shell");
     if (!shellTask) throw new Error("plan does not contain the required event.shell task");
 
+    // A job paused before claim must not create an event shell until resumed.
+    await args.executionControl?.waitUntilRunnable();
+
     let eventId = eventIdFrom(priorCheckpoints);
     const priorShellSucceeded = satisfied.has(shellTask.id);
     if (priorShellSucceeded && !eventId) {
@@ -192,6 +208,7 @@ export function createRunOrchestrator(overrides: Partial<OrchestratorDependencie
       {
         eventId: authoritativeEventId,
         denyList: args.denyList,
+        allowedUploadPaths: Object.values(args.assetPaths ?? {}),
         costCeilingUsd,
         costAlertUsd,
       },
@@ -210,9 +227,16 @@ export function createRunOrchestrator(overrides: Partial<OrchestratorDependencie
 
     let session: BrowserSession | null = null;
     let browserOpenError: Error | null = null;
+    await args.executionControl?.waitUntilRunnable();
     try {
-      session = await BrowserSession.open(args.browserProvider, guardrails, (trace) =>
-        queueTrace({ type: "browser", timestamp: trace.at, data: trace })
+      session = await BrowserSession.open(
+        args.browserProvider,
+        guardrails,
+        (trace) => queueTrace({ type: "browser", timestamp: trace.at, data: trace }),
+        {
+          beforeAction: () => args.executionControl?.waitUntilRunnable() ?? Promise.resolve(),
+          onConnected: args.onBrowserConnected,
+        }
       );
     } catch (error) {
       browserOpenError = error instanceof Error ? error : new Error(String(error));
@@ -230,6 +254,7 @@ export function createRunOrchestrator(overrides: Partial<OrchestratorDependencie
     try {
       for (const task of ordered) {
         if (task.id === shellTask.id) continue;
+        await args.executionControl?.waitUntilRunnable();
         const verificationTask = isVerificationTask(task);
 
         if (satisfied.has(task.id) && !verificationTask) {
@@ -300,6 +325,7 @@ export function createRunOrchestrator(overrides: Partial<OrchestratorDependencie
               procedure,
               session,
               guardrails,
+              assetPaths: args.assetPaths,
               budgetRemainingUsd: Math.max(0, costCeilingUsd - guardrails.spent),
             });
             outcome = taskResult.status === "success"

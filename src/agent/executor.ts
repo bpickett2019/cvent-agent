@@ -66,6 +66,8 @@ export interface ExecuteTaskArgs {
   procedure: Procedure | null;
   session: BrowserSession;
   guardrails: Guardrails;
+  /** Asset ids mapped to server-resolved paths. The model never chooses a filesystem path. */
+  assetPaths?: Record<string, string>;
   budgetRemainingUsd: number;
 }
 
@@ -372,13 +374,24 @@ function createTools(
         return "selected";
       }
     ),
-    browserTool<{ selector: string; assetPath: string }>(
+    browserTool<{ selector: string; assetId: string }>(
       "browser_upload",
-      "Upload the exact supplied asset to one Cvent file control.",
-      Type.Object({ selector: Type.String(), assetPath: Type.String() }, { additionalProperties: false }),
-      ({ selector, assetPath }) => ({ type: "upload", selector, value: assetPath, taskId: args.task.id }),
-      async ({ selector, assetPath }) => {
-        await args.session.perform({ type: "upload", selector, value: assetPath, taskId: args.task.id });
+      "Upload one exact asset id from the task payload to one Cvent file control.",
+      Type.Object({ selector: Type.String(), assetId: Type.String() }, { additionalProperties: false }),
+      ({ selector, assetId }) => ({
+        type: "upload",
+        selector,
+        value: args.assetPaths?.[assetId] ?? `unresolved:${assetId}`,
+        taskId: args.task.id,
+      }),
+      async ({ selector, assetId }) => {
+        const assetPath = args.assetPaths?.[assetId];
+        await args.session.perform({
+          type: "upload",
+          selector,
+          value: assetPath ?? `unresolved:${assetId}`,
+          taskId: args.task.id,
+        });
         return "uploaded";
       }
     ),

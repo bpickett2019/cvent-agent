@@ -145,7 +145,8 @@ async function writePortableSession(context: BrowserContext, page: Page, path: s
     )
     .catch(() => ({} as Record<string, string>));
 
-  await writeFile(path, `${JSON.stringify({ cookies, localStorage }, null, 2)}\n`, { mode: 0o600 });
+  const localStorageOrigin = new URL(page.url()).origin;
+  await writeFile(path, `${JSON.stringify({ cookies, localStorage, localStorageOrigin }, null, 2)}\n`, { mode: 0o600 });
 }
 
 async function consumeSentinel(path: string): Promise<boolean> {

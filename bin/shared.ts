@@ -6,6 +6,7 @@ const SessionContextSchema = z
   .object({
     cookies: z.array(z.record(z.unknown())),
     localStorage: z.record(z.string()).optional(),
+    localStorageOrigin: z.string().url().optional(),
   })
   .strict();
 

@@ -5,7 +5,8 @@ without a Cvent account, an Azure subscription, or a browser. `npx tsx smoke.ts`
 proves it.
 
 For current implementation status, local setup, blockers, and the exact next-chat
-prompt, read [`docs/HANDOFF.md`](docs/HANDOFF.md) first.
+prompt, read [`docs/SESSION-NOTES-2026-08-12.md`](docs/SESSION-NOTES-2026-08-12.md)
+and then [`docs/HANDOFF.md`](docs/HANDOFF.md).
 
 ## Design commitments
 
@@ -43,7 +44,10 @@ src/browser/driver.ts        Steel.dev + local Playwright behind one interface.
 src/cvent/api.ts             REST client. Writes events; reads everything else.
 src/verify/verifier.ts       Spec vs. actual diff. Operator-readable output.
 src/run/orchestrator.ts      Persisted plan execution, resume, budget, and triage.
+src/queue/jobQueue.ts        Durable leased local queue with retries and idempotency.
+src/assets/store.ts          Validated, content-addressed image asset storage.
 src/procedures/              Browser procedures as versioned data.
+web/app/api/                 Dashboard queue and image-upload boundaries.
 ```
 
 ## Langfuse tracing
@@ -89,10 +93,46 @@ than aspirational.
    cloning is acceptance criterion #2 and is currently assumed.
 5. Confirm the `status` enum value for Draft on `GET /events/{id}`.
 
+## Local queue and image intake
+
+The dashboard now queues validated `EventSpec` jobs instead of pretending to
+execute in the request lifecycle. Queue state is durable under ignored
+`.queue/`; `bin/worker.ts` claims jobs with a lease, heartbeats long runs,
+retries infrastructure failures, and dispatches through the existing
+orchestrator. The Run monitor exposes Steel's read-only live viewer while a
+session exists and provides durable Pause, Resume, and Cancel controls. Pause
+is enforced below Pi immediately before every task and browser action; an action
+already in flight may finish. This local backend is the development
+implementation of the job contract; hosted production still requires Azure
+Service Bus and authenticated operator identity.
+
+Uploaded PNG/JPEG/GIF/WebP images are signature-checked, limited to 10 MB,
+content-addressed, and stored under ignored `.assets/`. The model receives an
+asset id, never a filesystem path, and guardrails permit only trusted
+server-resolved paths. SharePoint references are captured in the UI but remain
+fail-closed until an approved Microsoft Graph resolver is configured.
+
+RR `.xlsx` and `.csv` documents can be uploaded for a deterministic, allowlisted
+preview. The importer extracts build metadata, registration mappings, and show
+questions while excluding personnel/reporting sheets. A preview is not an
+EventSpec and cannot execute; constrained AI normalization plus operator review
+is the next gate.
+
+```bash
+# Run all deterministic checks
+npm test
+
+# Claim one queued dashboard job with local Playwright
+npm run worker -- --once --local
+
+# Validate Steel against one explicitly approved disposable event
+npx tsx bin/validate-steel.ts --url "<sandbox event URL>" --event-id "<event UUID>"
+```
+
 ## Blocked, deliberately
 
-Real selectors (Week 4 sandbox), intake form fields (Week 1 ops interviews),
-deny-list contents (Emerald supplies Week 3), Azure IaC (tickets filed Week 0).
+Real selectors (approved sandbox capture), complete RR-to-EventSpec mapping,
+client deny-list contents, Microsoft Graph resolution, and hosted Azure infrastructure.
 
 Writing browser automation against assumed DOM today is exactly the work that
 Week 5 first contact invalidates. The procedure format is built; the procedures

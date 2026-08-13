@@ -1,0 +1,62 @@
+import { randomUUID } from "node:crypto";
+import { NextResponse } from "next/server";
+import { plan } from "../../../../src/planner/plan";
+import {
+  RUN_EVENT_JOB_KIND,
+  type RunEventJobPayload,
+} from "../../../../src/queue/runJob";
+import { EventSpec } from "../../../../src/spec/eventSpec";
+import { jobQueue, publicJob, runControls } from "../../../lib/job-server";
+
+export const runtime = "nodejs";
+
+export async function POST(request: Request): Promise<NextResponse> {
+  try {
+    const body = (await request.json()) as { spec?: unknown; operator?: unknown };
+    const spec = EventSpec.parse(body.spec);
+    const operator = parseOperator(body.operator);
+    const requestKey = request.headers.get("idempotency-key")?.trim() || randomUUID();
+    const specHash = plan(spec).specHash;
+    const queue = jobQueue();
+    const job = await queue.enqueue({
+      kind: RUN_EVENT_JOB_KIND,
+      idempotencyKey: `${operator.id}:${requestKey}`,
+      maxAttempts: 3,
+      payload: {
+        spec,
+        operator,
+        requestedAt: new Date().toISOString(),
+      },
+    });
+    const control = await runControls().initialize(job.id);
+    return NextResponse.json(
+      { job: publicJob(job, control), specHash },
+      { status: job.attempts === 0 && job.status === "queued" ? 202 : 200 }
+    );
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "The run could not be queued." },
+      { status: 400 }
+    );
+  }
+}
+
+export async function GET(): Promise<NextResponse> {
+  const jobs = (await jobQueue().list({ kinds: [RUN_EVENT_JOB_KIND] })).slice(0, 50);
+  const controls = runControls();
+  return NextResponse.json({
+    jobs: await Promise.all(jobs.map(async (job) => publicJob(job, await controls.get(job.id)))),
+  });
+}
+
+function parseOperator(value: unknown): RunEventJobPayload["operator"] {
+  if (typeof value !== "object" || value === null) {
+    return { id: "demo-operator", email: "demo-operator@example.invalid" };
+  }
+  const candidate = value as { id?: unknown; email?: unknown };
+  if (typeof candidate.id !== "string" || !candidate.id.trim()) throw new Error("operator id is required");
+  if (typeof candidate.email !== "string" || !/^\S+@\S+\.\S+$/.test(candidate.email)) {
+    throw new Error("operator email is invalid");
+  }
+  return { id: candidate.id.trim(), email: candidate.email.trim() };
+}

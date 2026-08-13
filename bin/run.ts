@@ -3,6 +3,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { shutdownLangfuse } from "../src/agent/telemetry";
+import { AssetStore, sharePointAssetPaths } from "../src/assets/store";
 import { CventApi } from "../src/cvent/api";
 import { LocalPlaywrightProvider, SteelProvider, type BrowserProvider } from "../src/browser/driver";
 import { executionOrder, plan } from "../src/planner/plan";
@@ -18,6 +19,7 @@ const HELP = `Usage:
 
 Options:
   --run-dir <dir>          Durable run files (default: .runs)
+  --asset-dir <dir>        Uploaded image files (default: .assets)
   --operator-id <id>       Operator id (default: EMERALDX_OPERATOR)
   --operator-email <email> Operator email (default: EMERALDX_OPERATOR)
   --help                   Show this help
@@ -26,7 +28,7 @@ Options:
 async function main(): Promise<void> {
   loadLocalEnvironment();
   const args = parseArgs(process.argv.slice(2), {
-    values: ["spec", "session", "resume", "run-dir", "operator-id", "operator-email"],
+    values: ["spec", "session", "resume", "run-dir", "asset-dir", "operator-id", "operator-email"],
     flags: ["dry-run", "local", "headed", "help"],
   });
   if (args.flags.has("help")) {
@@ -40,7 +42,7 @@ async function main(): Promise<void> {
   if (resumeRunId && dryRun) throw new Error("--resume cannot be combined with --dry-run");
   if (!resumeRunId && !specPath) throw new Error("--spec is required unless --resume is used");
 
-  const runRoot = resolve(args.values.get("run-dir") ?? ".runs");
+  const runRoot = resolve(args.values.get("run-dir") ?? process.env.EMERALDX_RUN_DIR ?? ".runs");
   let spec: EventSpecType;
   let store: FileRunStore;
 
@@ -62,6 +64,14 @@ async function main(): Promise<void> {
     console.log(JSON.stringify({ ...eventPlan, tasks: executionOrder(eventPlan) }, null, 2));
     return;
   }
+
+  const sharePointPaths = sharePointAssetPaths(spec);
+  if (sharePointPaths.length) {
+    throw new Error(
+      `the spec references ${sharePointPaths.length} SharePoint image(s), but no Microsoft Graph asset resolver is configured; resolve them to approved uploaded assets before execution`
+    );
+  }
+  const assetPaths = await new AssetStore(resolve(args.values.get("asset-dir") ?? process.env.EMERALDX_ASSET_DIR ?? ".assets")).resolveSpec(spec);
 
   const sessionPath = args.values.get("session") ?? "session.json";
   const sessionContext = await loadCapturedSession(sessionPath);
@@ -100,6 +110,7 @@ async function main(): Promise<void> {
       selectors: csvEnv("EMERALDX_DENY_SELECTORS"),
       urlPatterns: csvEnv("EMERALDX_DENY_URL_PATTERNS"),
     },
+    assetPaths,
     costCeilingUsd: numberEnv("EMERALDX_COST_CEILING_USD", 30),
     costAlertUsd: numberEnv("EMERALDX_COST_ALERT_USD", 20),
     resumeRunId,

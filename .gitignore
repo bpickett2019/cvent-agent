@@ -29,7 +29,12 @@ crash.log
 # Runtime artifacts
 artifacts/
 logs/
+.runs
 .runs/
+.queue
+.queue/
+.assets
+.assets/
 session.json
 discovered.json
 discovered/

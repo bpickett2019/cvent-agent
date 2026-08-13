@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { EventSpec as EventSpecSchema, type EventSpec, type Question } from "../../src/spec/eventSpec";
 import type { ZodIssue } from "zod";
+import { ImageRefField } from "./image-ref-field";
+import { RRDocumentImport } from "./rr-document-import";
 
 type RegistrationType = EventSpec["registrationTypes"][number];
 type AdmissionItem = EventSpec["registration"]["admissionItems"][number];
@@ -31,11 +33,18 @@ const answerTypes: Array<{ value: Question["answerType"]; label: string }> = [
 export function IntakeForm({ seed }: IntakeFormProps) {
   const [spec, setSpec] = useState<EventSpec>(() => structuredClone(seed));
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState("");
+  const [queuedJobId, setQueuedJobId] = useState("");
+  const submissionKey = useRef(crypto.randomUUID());
   const validation = useMemo(() => EventSpecSchema.safeParse(spec), [spec]);
   const issues = validation.success ? [] : validation.error.issues;
 
   const update = (recipe: (draft: EventSpec) => void) => {
     setSubmitted(false);
+    setSubmissionError("");
+    setQueuedJobId("");
+    submissionKey.current = crypto.randomUUID();
     setSpec((current) => {
       const draft = structuredClone(current);
       recipe(draft);
@@ -43,10 +52,29 @@ export function IntakeForm({ seed }: IntakeFormProps) {
     });
   };
 
-  const submit = () => {
-    if (!validation.success) return;
-    setSubmitted(true);
-    document.getElementById("intake-top")?.scrollIntoView({ behavior: "smooth" });
+  const submit = async () => {
+    if (!validation.success || submitting) return;
+    setSubmitting(true);
+    setSubmissionError("");
+    try {
+      const response = await fetch("/api/jobs", {
+        method: "POST",
+        headers: { "content-type": "application/json", "idempotency-key": submissionKey.current },
+        body: JSON.stringify({
+          spec: validation.data,
+          operator: { id: "demo-operator", email: "demo-operator@example.invalid" },
+        }),
+      });
+      const body = (await response.json()) as { job?: { id: string }; error?: string };
+      if (!response.ok || !body.job) throw new Error(body.error || "The run could not be queued.");
+      setQueuedJobId(body.job.id);
+      setSubmitted(true);
+      document.getElementById("intake-top")?.scrollIntoView({ behavior: "smooth" });
+    } catch (error) {
+      setSubmissionError(error instanceof Error ? error.message : "The run could not be queued.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -65,7 +93,13 @@ export function IntakeForm({ seed }: IntakeFormProps) {
 
       {submitted && (
         <div className="notice success-notice" role="status">
-          <strong>Intake accepted.</strong> The EventSpec is valid and ready for deterministic planning.
+          <strong>Run queued.</strong> Job {queuedJobId} is durable and ready for a worker. Completed work will be checkpointed for safe resume.
+        </div>
+      )}
+
+      {submissionError && (
+        <div className="notice error-summary" role="alert">
+          <strong>The run was not queued.</strong><span>{submissionError}</span>
         </div>
       )}
 
@@ -75,6 +109,8 @@ export function IntakeForm({ seed }: IntakeFormProps) {
           <span>{plainIssue(issues[0])}</span>
         </div>
       )}
+
+      <RRDocumentImport />
 
       <Section number="01" title="Event details" description="The event shell is cloned first, then these details are applied through the API.">
         <div className="form-grid three">
@@ -114,7 +150,14 @@ export function IntakeForm({ seed }: IntakeFormProps) {
         </div>
       </Section>
 
-      <Section number="02" title="Registration types" description="Who someone is—not what they buy. Order these as they should appear to operators." action={<button className="secondary-button" onClick={() => update((draft) => draft.registrationTypes.push(newRegistrationType(draft.registrationTypes.length)))}>+ Add type</button>}>
+      <Section number="02" title="Site images" description="Upload approved image files or reference their exact SharePoint location. Files are resolved by trusted server code, never by the model.">
+        <div className="asset-grid">
+          <ImageRefField label="Header logo" value={spec.header?.logo} onChange={(value) => update((draft) => setHeaderImage(draft, "logo", value))} />
+          <ImageRefField label="Header banner" value={spec.header?.bannerImage} onChange={(value) => update((draft) => setHeaderImage(draft, "bannerImage", value))} />
+        </div>
+      </Section>
+
+      <Section number="03" title="Registration types" description="Who someone is—not what they buy. Order these as they should appear to operators." action={<button className="secondary-button" onClick={() => update((draft) => draft.registrationTypes.push(newRegistrationType(draft.registrationTypes.length)))}>+ Add type</button>}>
         <div className="item-list">
           {spec.registrationTypes.map((type, index) => (
             <ItemCard key={`${type.key}-${index}`} index={index} title={type.name || "Untitled registration type"} onUp={() => update((draft) => move(draft.registrationTypes, index, -1))} onDown={() => update((draft) => move(draft.registrationTypes, index, 1))} onRemove={() => update((draft) => void draft.registrationTypes.splice(index, 1))} first={index === 0} last={index === spec.registrationTypes.length - 1}>
@@ -128,7 +171,7 @@ export function IntakeForm({ seed }: IntakeFormProps) {
         </div>
       </Section>
 
-      <Section number="03" title="Registration questions" description="Define placement, answer design, and exactly who should see each question." action={<button className="primary-small" onClick={() => update((draft) => draft.questions.push(newQuestion(draft.questions)))}>+ Add question</button>}>
+      <Section number="04" title="Registration questions" description="Define placement, answer design, and exactly who should see each question." action={<button className="primary-small" onClick={() => update((draft) => draft.questions.push(newQuestion(draft.questions)))}>+ Add question</button>}>
         <div className="question-list">
           {spec.questions.map((question, index) => {
             const priorQuestions = spec.questions.filter((candidate) => candidate.order < question.order && candidate.key !== question.key);
@@ -176,7 +219,7 @@ export function IntakeForm({ seed }: IntakeFormProps) {
 
       <div className="submit-bar">
         <div><strong>{validation.success ? "EventSpec is complete" : "EventSpec needs attention"}</strong><span>{validation.success ? `${spec.questions.length} questions and ${spec.registrationTypes.length} registration types are ready to plan.` : plainIssue(issues[0])}</span></div>
-        <button className="submit-button" disabled={!validation.success} onClick={submit}>Submit for planning <span>→</span></button>
+        <button className="submit-button" disabled={!validation.success || submitting} onClick={() => void submit()}>{submitting ? "Queuing run…" : "Queue for execution"} <span>→</span></button>
       </div>
     </div>
   );
@@ -184,7 +227,7 @@ export function IntakeForm({ seed }: IntakeFormProps) {
 
 function CommerceSections({ spec, issues, update }: { spec: EventSpec; issues: ZodIssue[]; update: (recipe: (draft: EventSpec) => void) => void }) {
   return (
-    <Section number="04" title="Registration commerce" description="Admission products, optional purchases, discounts, and registration paths inherited or changed for this event.">
+    <Section number="05" title="Registration commerce" description="Admission products, optional purchases, discounts, and registration paths inherited or changed for this event.">
       <CompactCollection title="Admission items" count={spec.registration.admissionItems.length} onAdd={() => update((draft) => draft.registration.admissionItems.push(newAdmissionItem(draft.registration.admissionItems.length)))}>
         {spec.registration.admissionItems.map((item, index) => <CommerceRow key={`${item.key}-${index}`} title={item.name} onRemove={() => update((draft) => void draft.registration.admissionItems.splice(index, 1))}><div className="form-grid four"><Field label="Key"><input value={item.key} onChange={(e) => update((d) => void (d.registration.admissionItems[index].key = slug(e.target.value)))} /></Field><Field label="Name" error={fieldError(issues, `registration.admissionItems.${index}.name`)}><input value={item.name} onChange={(e) => update((d) => void (d.registration.admissionItems[index].name = e.target.value))} /></Field><Field label="Price"><input type="number" min="0" value={item.price} onChange={(e) => update((d) => void (d.registration.admissionItems[index].price = Number(e.target.value)))} /></Field><Field label="Currency"><input maxLength={3} value={item.currency} onChange={(e) => update((d) => void (d.registration.admissionItems[index].currency = e.target.value.toUpperCase()))} /></Field></div></CommerceRow>)}
       </CompactCollection>
@@ -218,6 +261,18 @@ function move<T>(items: T[], index: number, direction: -1 | 1): void { const des
 function toLocalInput(iso: string): string { return iso.slice(0, 16); }
 function fromLocalInput(value: string): string { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toISOString(); }
 function ensureVenue(spec: EventSpec): NonNullable<EventSpec["details"]["venue"]> { return spec.details.venue ?? { name: "", address1: "", city: "", state: "", postalCode: "", country: "US" }; }
+function setHeaderImage(spec: EventSpec, key: "logo" | "bannerImage", value: NonNullable<EventSpec["header"]>["logo"] | undefined): void {
+  if (value) {
+    spec.header ??= { title: "", subtitle: "", showEventDates: true, showLocation: true };
+    spec.header[key] = value;
+    return;
+  }
+  if (!spec.header) return;
+  delete spec.header[key];
+  if (!spec.header.logo && !spec.header.bannerImage && !spec.header.title && !spec.header.subtitle && spec.header.showEventDates && spec.header.showLocation) {
+    delete spec.header;
+  }
+}
 function newRegistrationType(index: number): RegistrationType { return { key: `type-${index + 1}`, name: "New registration type", description: "" }; }
 function newQuestion(questions: Question[]): Question { const order = Math.max(0, ...questions.map((question) => question.order)) + 1; return { key: `question-${order}`, text: "", page: "show-questions", order, answerType: "text", answerValues: [], required: false, visibility: { type: "always" } }; }
 function newAdmissionItem(index: number): AdmissionItem { return { key: `admission-${index + 1}`, name: "New admission item", description: "", price: 0, currency: "USD" }; }

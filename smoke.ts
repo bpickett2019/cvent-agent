@@ -205,6 +205,7 @@ const g = new Guardrails(
   {
     eventId: EVENT_ID,
     denyList: { selectors: ["#danger-zone"], urlPatterns: ["https://*.cvent.com/admin/*"] },
+    allowedUploadPaths: ["/approved/assets/logo.png"],
     costCeilingUsd: 30,
     costAlertUsd: 20,
   },
@@ -234,20 +235,46 @@ blocked("wrong event id blocked", {
 });
 blocked("deny-listed selector blocked", { type: "click", selector: "#danger-zone > a", taskId: "t5" });
 blocked("deny-listed url blocked", { type: "navigate", url: "https://web.cvent.com/admin/users", taskId: "t6" });
+blocked("attendee selector blocked", {
+  type: "click",
+  selector: "role=link[name='Attendees']",
+  taskId: "t7",
+});
+blocked("encoded attendee url blocked", {
+  type: "navigate",
+  url: `https://app.cvent.com/events/${EVENT_ID}/%61ttendees`,
+  taskId: "t8",
+});
+blocked("unapproved upload blocked", {
+  type: "upload",
+  selector: "input[type=file]",
+  value: "/etc/passwd",
+  taskId: "t9",
+});
 
 try {
-  g.check({ type: "navigate", url: `https://app.cvent.com/events/${EVENT_ID}/designer`, taskId: "t7" });
-  check("in-scope navigation allowed", true);
+  g.check({ type: "navigate", url: `https://app.cvent.com/events/${EVENT_ID.toUpperCase()}/designer`, taskId: "t10" });
+  g.check({
+    type: "upload",
+    selector: "input[type=file]",
+    value: "/approved/assets/logo.png",
+    taskId: "t11",
+  });
+  check("in-scope navigation and approved upload allowed", true);
 } catch (err) {
-  check("in-scope navigation allowed", false, String(err));
+  check("in-scope navigation and approved upload allowed", false, String(err));
 }
 
-check("every denial was logged", denied.length === 6, `${denied.length} logged`);
+check("every denial was logged", denied.length === 9, `${denied.length} logged`);
 check("event id extraction", extractEventIds(`https://app.cvent.com/events/${EVENT_ID}/x`)[0] === EVENT_ID);
+check(
+  "Cvent evtstub extraction",
+  extractEventIds(`https://planner-registration-ui.app.cvent.com/page?evtstub=${EVENT_ID}`)[0] === EVENT_ID
+);
 
 g.accrue(19);
 g.accrue(12); // 31 — over ceiling
-blocked("cost ceiling halts run", { type: "click", selector: "#save", taskId: "t8" });
+blocked("cost ceiling halts run", { type: "click", selector: "#save", taskId: "t12" });
 
 console.log(`\n${failures === 0 ? "ALL CHECKS PASSED" : `${failures} FAILURE(S)`}\n`);
 process.exit(failures === 0 ? 0 : 1);

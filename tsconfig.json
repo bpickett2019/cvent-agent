@@ -4,5 +4,5 @@
     "strict": true, "skipLibCheck": true, "noEmit": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "bin/**/*.ts", "smoke.ts", "executor.smoke.ts", "run.smoke.ts"]
+  "include": ["src/**/*.ts", "bin/**/*.ts", "*.smoke.ts"]
 }
