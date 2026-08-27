@@ -139,6 +139,11 @@ const duplicateQuestion = structuredClone(raw);
 duplicateQuestion.questions[1].key = duplicateQuestion.questions[0].key;
 check("duplicate question keys rejected", !EventSpec.safeParse(duplicateQuestion).success);
 
+const colorOnly = structuredClone(raw) as typeof raw;
+delete (colorOnly.theme as { templateName?: string }).templateName;
+const colorOnlyParsed = EventSpec.safeParse(colorOnly);
+check("color-only theme without templateName parses", colorOnlyParsed.success);
+
 console.log("\n[2] Planner");
 const p = plan(spec);
 const ordered = executionOrder(p);
@@ -251,6 +256,30 @@ blocked("unapproved upload blocked", {
   value: "/etc/passwd",
   taskId: "t9",
 });
+blocked("Activate blocked", { type: "click", selector: "role=button[name='Activate']", taskId: "t13" });
+blocked("Go Live blocked", { type: "click", selector: "role=button[name='Go Live']", taskId: "t14" });
+blocked("Launch blocked", { type: "click", selector: "role=button[name='Launch']", taskId: "t15" });
+blocked("delete-event blocked", { type: "click", selector: "button#delete-event", taskId: "t16" });
+blocked("contacts url blocked", {
+  type: "navigate",
+  url: `https://app.cvent.com/events/${EVENT_ID}/contacts`,
+  taskId: "t17",
+});
+blocked("invitees url blocked", {
+  type: "navigate",
+  url: `https://app.cvent.com/events/${EVENT_ID}/invitees`,
+  taskId: "t18",
+});
+blocked("address-book url blocked", {
+  type: "navigate",
+  url: `https://app.cvent.com/events/${EVENT_ID}/address-book`,
+  taskId: "t19",
+});
+blocked("registrant selector blocked", {
+  type: "click",
+  selector: "role=link[name='Registrants']",
+  taskId: "t20",
+});
 
 try {
   g.check({ type: "navigate", url: `https://app.cvent.com/events/${EVENT_ID.toUpperCase()}/designer`, taskId: "t10" });
@@ -260,12 +289,44 @@ try {
     value: "/approved/assets/logo.png",
     taskId: "t11",
   });
-  check("in-scope navigation and approved upload allowed", true);
+  g.check({ type: "click", selector: "role=button[name='Save']", taskId: "t21" });
+  check("in-scope navigation, Save, and approved upload allowed", true);
 } catch (err) {
-  check("in-scope navigation and approved upload allowed", false, String(err));
+  check("in-scope navigation, Save, and approved upload allowed", false, String(err));
 }
 
-check("every denial was logged", denied.length === 9, `${denied.length} logged`);
+const SANDBOX_ID = "020c932b-59d7-484a-80e1-229f20d57a7e";
+const sandbox = new Guardrails(
+  {
+    eventId: SANDBOX_ID,
+    denyList: { selectors: [], urlPatterns: [] },
+    costCeilingUsd: 30,
+    costAlertUsd: 20,
+  },
+  () => {}
+);
+try {
+  sandbox.check({
+    type: "navigate",
+    url: `https://planner-registration-ui.app.cvent.com/page?evtstub=${SANDBOX_ID}`,
+    taskId: "t22",
+  });
+  check("sandbox evtstub navigation allowed", true);
+} catch (err) {
+  check("sandbox evtstub navigation allowed", false, String(err));
+}
+try {
+  sandbox.check({
+    type: "navigate",
+    url: `https://planner-registration-ui.app.cvent.com/page?evtstub=${OTHER_ID}`,
+    taskId: "t23",
+  });
+  check("mismatched evtstub blocked", false, "was ALLOWED");
+} catch (err) {
+  check("mismatched evtstub blocked", err instanceof GuardrailViolation, (err as GuardrailViolation).rule);
+}
+
+check("every denial was logged", denied.length === 17, `${denied.length} logged`);
 check("event id extraction", extractEventIds(`https://app.cvent.com/events/${EVENT_ID}/x`)[0] === EVENT_ID);
 check(
   "Cvent evtstub extraction",

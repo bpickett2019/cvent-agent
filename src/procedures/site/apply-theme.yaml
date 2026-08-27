@@ -1,55 +1,83 @@
-# EXAMPLE ONLY — selectors are placeholders until Week 4 sandbox validation.
-# This file documents the procedure FORMAT, not real Cvent selectors.
-
 id: site/apply-theme
-version: 1
+version: 2
 goal: >
-  Apply the specified template and colour palette to the event website.
+  Set Color 1 (primary) on the event website theme. Optionally select an exact
+  template when theme.templateName is present. Save only — never publish.
 
 preconditions:
   - Event exists and is bound to the run's event id
   - Operator's Cvent session is active in the browser
+  - Work stays inside Site Designer for the bound event
 
 # Ordered steps. Natural language carries intent; selector hints are attempted
 # first and the agent falls back to reading the page only when they miss.
 # Prefer role/ARIA anchors over CSS classes — Cvent ships UI changes.
+# Provenance (live sandbox 020c932b-59d7-484a-80e1-229f20d57a7e, 2026-08-27):
+# Site Designer → Registration Page Personal Information → Theme → Colors.
+# Color 1 (primary) #FFFFFF → #0B7A4B. Colors 2–5 untouched.
+# Save (not Publish). Toast "Way to go!". Unpublished draft badge remained.
+# Account theme was "0 medtrade theme". "Emerald Corporate" does NOT exist.
+# A theme named "Emerald" exists — do NOT auto-substitute it.
 steps:
-  - description: Open the event website designer
-    selectorHint: "role=link[name='Website']"
+  - description: >
+      Open Site Designer, then the Registration Page Personal Information
+      website view for this event.
+    selectorHint: "role=heading[name='Site Designer']"
     verify: "role=heading[name='Site Designer']"
 
-  - description: Open the theme picker
+  - description: >
+      Open Theme. The account theme observed on 2026-08-27 was "0 medtrade theme".
+      "Emerald Corporate" does not exist in this account. A theme named "Emerald"
+      exists and is not a substitute for any other name.
     selectorHint: "role=button[name='Theme']"
 
-  - description: Select the template named in the spec
-    selectorHint: "role=option[name='{{theme.templateName}}']"
+  - description: >
+      If theme.templateName is present, select that exact accessible name.
+      If it is missing, halt this step with reason "template-not-found" and
+      continue the color-only path. If it is present but no exact match exists,
+      halt with reason "template-not-found", list the visible template names,
+      and continue the color-only path. Never auto-substitute a similar name
+      (do not pick "Emerald" for "Emerald Corporate").
     onMiss: >
-      Read the visible template list. If no exact name match exists, halt with
-      reason "template-not-found" and list what was available. Do NOT substitute
-      a similar-looking template.
+      Halt with reason "template-not-found" and list what was available. Do NOT
+      substitute a similar-looking template. Continue with Color 1 only.
 
-  - description: Set the primary colour
-    selectorHint: "input[data-role='primary-color']"
+  - description: Open Colors
+    selectorHint: "role=button[name='Colors']"
+
+  - description: >
+      Set Color 1 (primary) to the specified hex. Leave Colors 2, 3, 4, and 5
+      untouched.
+    selectorHint: "role=textbox[name='Color 1']"
     value: "{{theme.palette.primary}}"
 
-  - description: Save the theme
+  - description: >
+      Save the theme. Click Save only — never Publish, Go Live, Launch, or Activate.
     selectorHint: "role=button[name='Save']"
-    verify: "text=Changes saved"
+    verify: "text=Way to go!"
 
-# Checked BEFORE the steps run. If already satisfied, the task is skipped —
-# this is what makes retries resume rather than duplicate.
+  - description: Confirm the unpublished draft badge is still visible after save
+    verify: "text=Unpublished draft"
+
+# Checked BEFORE the steps run. If Color 1 already matches, skip — retries resume.
 idempotency:
-  check: "The active theme name equals {{theme.templateName}} and the primary swatch equals {{theme.palette.primary}}"
+  check: >
+    Color 1 already equals {{theme.palette.primary}} and Colors 2–5 are unchanged.
 
-# Known failure modes. Cheaper to encode than to rediscover each run.
 failureModes:
   - symptom: "Unsaved-changes modal blocks navigation"
     action: "Choose 'Discard' — the spec is the source of truth, not prior state."
   - symptom: "Theme picker renders empty"
     action: "Reload once. If still empty, halt with reason 'theme-picker-empty'."
+  - symptom: "Named template is missing or only a similarly named theme is listed"
+    action: >
+      Halt with reason "template-not-found". Do not substitute. Continue the
+      color-only path for Color 1.
+  - symptom: "Save is offered alongside Publish, Go Live, Launch, or Activate"
+    action: "Do not click those controls. Click Save only, or halt."
 
 # Set by the merge process, not by the agent. Proposed updates land as a PR.
 provenance:
   authoredBy: human
-  validatedAgainst: null   # fill with the Cvent build id at Week 4
-  lastReviewed: null
+  validatedAgainst: "020c932b-59d7-484a-80e1-229f20d57a7e"
+  lastReviewed: "2026-08-27"
