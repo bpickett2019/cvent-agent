@@ -367,7 +367,7 @@ export function createRunOrchestrator(overrides: Partial<OrchestratorDependencie
         report.findings.unshift({
           severity: "blocking",
           area: "status",
-          message: "Event is NOT in Draft status. The run must be halted and escalated immediately.",
+          message: "Event is published or not unpublished (Draft/Pending). The run must be halted and escalated immediately.",
         });
         report.passed = false;
       }
@@ -459,13 +459,13 @@ async function dispatchApiTask(
         outcome: draft
           ? {
               status: "succeeded",
-              evidence: "The Cvent API confirmed that the event remains in Draft.",
+              evidence: "The Cvent API confirmed that the event remains unpublished (Draft or Pending).",
               detail: null,
             }
           : {
               status: "halted",
               evidence: null,
-              detail: "The event could not be confirmed as Draft and requires immediate operator review.",
+              detail: "The event could not be confirmed as unpublished (Draft or Pending) and requires immediate operator review.",
             },
       };
     }

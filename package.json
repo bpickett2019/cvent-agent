@@ -5,6 +5,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "smoke": "tsx smoke.ts",
+    "smoke:api": "tsx api.smoke.ts",
+    "smoke:theme": "tsx theme.smoke.ts",
     "smoke:executor": "tsx executor.smoke.ts",
     "smoke:run": "tsx run.smoke.ts",
     "smoke:queue": "tsx queue.smoke.ts",
@@ -12,7 +14,7 @@
     "smoke:rr": "tsx rr.smoke.ts",
     "smoke:browser": "tsx browser.smoke.ts",
     "smoke:control": "tsx control.smoke.ts",
-    "test": "npm run typecheck && npm run smoke && npm run smoke:executor && npm run smoke:run && npm run smoke:queue && npm run smoke:assets && npm run smoke:rr && npm run smoke:browser && npm run smoke:control",
+    "test": "npm run typecheck && npm run smoke && npm run smoke:api && npm run smoke:theme && npm run smoke:executor && npm run smoke:run && npm run smoke:queue && npm run smoke:assets && npm run smoke:rr && npm run smoke:browser && npm run smoke:control",
     "worker": "tsx bin/worker.ts"
   },
   "dependencies": {

@@ -52,14 +52,14 @@ export async function verify(
       add({
         severity: "blocking",
         area: "status",
-        message: "Event is NOT in Draft status. The run must be halted and escalated immediately.",
+        message: "Event is published or not unpublished (Draft/Pending). The run must be halted and escalated immediately.",
       });
     }
   } catch (err) {
     add({
       severity: "blocking",
       area: "status",
-      message: `Could not confirm Draft status: ${err instanceof Error ? err.message : String(err)}`,
+      message: `Could not confirm unpublished (Draft/Pending) status: ${err instanceof Error ? err.message : String(err)}`,
     });
   }
 
