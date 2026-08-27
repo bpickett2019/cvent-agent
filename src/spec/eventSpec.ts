@@ -55,7 +55,8 @@ export const EventDetails = z.object({
 /* channel: BROWSER — no API surface for the site designer.                     */
 
 export const Theme = z.object({
-  templateName: z.string().min(1),
+  /** Exact account template. Optional so a color-only path can run when missing. */
+  templateName: z.string().min(1).optional(),
   palette: z.object({
     primary: Hex,
     secondary: Hex.optional(),

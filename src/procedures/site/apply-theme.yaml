@@ -3,31 +3,33 @@ version: 2
 goal: Reconcile the mapped Site Designer theme fields exactly, with one save and independent read-back.
 preconditions:
   - Event URL evtstub equals the run event id and the exact authorized event name is visible
-  - Browser title is Site Designer and [data-cvent-id="nucleus-site-editor-site-header"] is visible
+  - Browser title is Site Designer and the site header editor is visible
   - Top-level Save is disabled at task start; otherwise halt on a pre-existing draft
 steps:
-  - description: Read the current theme before writing; assert the Theme breadcrumb and exact active theme {{theme.templateName}}
+  - description: Open Theme and read the current theme and Color 1 before writing; the retained account theme is 0 medtrade theme
     selectorHint: '[data-cvent-id="editor-panel-tab-EditorTabTypes.STYLE"]'
-    verify: 'Breadcrumb contains Theme and visible panel contains {{theme.templateName}}'
+    verify: 'Theme panel is visible and current values have been recorded'
     onMiss: Halt with theme-not-found; do not select a similar theme.
-  - description: Reconcile only the requested theme palette and font fields after reading every target value
+  - description: If an exact template name is supplied, select only that exact theme; otherwise retain the active theme and reconcile Color 1 only
     selectorHint: '[data-cvent-id="nucleus-site-editor-menu-item-palette"]'
-    value: '{{theme}}'
-    onMiss: Halt if a requested field lacks an exact mapped control; do not use Change Theme, Save as, Reset Theme Styles, or More Actions.
-  - description: Save the complete reconciled surface exactly once
+    value: '{{theme.palette.primary}}'
+    onMiss: Halt if Color 1 lacks an exact mapped control; preserve all unrequested colors and fonts.
+  - description: Save the complete reconciled theme exactly once
     selectorHint: '[data-cvent-id="site-designer-save-button"]'
-    verify: 'The save completes and the top-level Save returns to disabled'
-  - description: Reload the same event-scoped Site Designer route and independently read back the theme
+    verify: 'text=Way to go! and the top-level Save returns to disabled'
+  - description: Reload the same event-scoped Site Designer route and independently read back the theme and Color 1
     selectorHint: '[data-cvent-id="editor-panel-tab-EditorTabTypes.STYLE"]'
-    verify: 'Theme breadcrumb, exact theme name {{theme.templateName}}, and every requested value equal {{theme}}'
+    verify: 'The active theme remains exact and Color 1 equals {{theme.palette.primary}}; all unrequested values remain unchanged'
 idempotency:
-  check: 'Read back shows the exact requested theme fields {{theme}}; if equal, perform no write and no save.'
+  check: 'Read back shows Color 1 equals {{theme.palette.primary}} and any supplied exact theme already matches; if equal, perform no write and no save.'
 failureModes:
-  - symptom: Event, title, surface, breadcrumb, or starting clean-state guard fails
+  - symptom: Event identity, title, surface, or starting clean-state guard fails
     action: Halt without changing state.
+  - symptom: Named theme is absent or only a similarly named theme is listed
+    action: Halt with theme-not-found; do not substitute another theme.
   - symptom: Saved values differ after reload
     action: Report FAIL with before, intended, and after values; do not retry Save.
 provenance:
-  authoredBy: agent-proposed
-  validatedAgainst: retained-agent-6-site-designer-map
-  lastReviewed: '2026-09-01'
+  authoredBy: human
+  validatedAgainst: retained-agent-6-site-designer-map-and-live-sandbox-020c932b-59d7-484a-80e1-229f20d57a7e
+  lastReviewed: '2026-09-02'

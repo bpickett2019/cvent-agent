@@ -5,6 +5,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "smoke": "tsx smoke.ts",
+    "smoke:api": "tsx api.smoke.ts",
+    "smoke:theme": "tsx theme.smoke.ts",
     "smoke:executor": "tsx executor.smoke.ts",
     "smoke:run": "tsx run.smoke.ts",
     "smoke:copy-template": "tsx copy-template.smoke.ts",
@@ -15,6 +17,7 @@
     "smoke:rr-field-coverage": "tsx rr-field-coverage.smoke.ts",
     "smoke:browser": "tsx browser.smoke.ts",
     "smoke:control": "tsx control.smoke.ts",
+
     "smoke:web-console": "tsx web-console.smoke.ts",
     "smoke:authorized-target": "tsx authorized-target.smoke.ts",
     "smoke:workspace": "tsx workspace.smoke.ts",
@@ -43,7 +46,7 @@
     "smoke:compiler": "npm run smoke:compiler-event-details && npm run smoke:compiler-footer-paths && npm run smoke:compiler-registration-commerce && npm run smoke:compiler-discounts-vouchers && npm run smoke:compiler-question-semantics && npm run smoke:compiler-full-rr && npm run smoke:compiler-event-spec && npm run smoke:event-source && npm run smoke:legacy-registration && npm run smoke:legacy-footer && npm run smoke:legacy-questions && npm run smoke:full-rr-legacy-integration",
     "smoke:events-reconcile": "tsx events-reconcile.smoke.ts",
     "smoke:site-designer-procedures": "tsx site-designer-procedures.smoke.ts",
-    "test": "npm run typecheck && npm run smoke && npm run smoke:site-designer-procedures && npm run smoke:executor && npm run smoke:run && npm run smoke:copy-template && npm run smoke:copy-template-fail-closed && npm run smoke:queue && npm run smoke:assets && npm run smoke:rr && npm run smoke:rr-field-coverage && npm run smoke:operator-review && npm run smoke:browser && npm run smoke:control && npm run smoke:web-console && npm run smoke:authorized-target && npm run smoke:workspace && npm run smoke:auth && npm run smoke:entra-auth && npm run smoke:entra-callback-proxy && npm run smoke:deployment-bootstrap && npm run smoke:security-blockers && npm run smoke:authorization-registry && npm run smoke:workspace-docker && npm run smoke:document-team && npm run smoke:steel-capacity && npm run smoke:compiler && npm run smoke:events-reconcile",
+    "test": "npm run typecheck && npm run smoke && npm run smoke:api && npm run smoke:theme && npm run smoke:site-designer-procedures && npm run smoke:executor && npm run smoke:run && npm run smoke:copy-template && npm run smoke:copy-template-fail-closed && npm run smoke:queue && npm run smoke:assets && npm run smoke:rr && npm run smoke:rr-field-coverage && npm run smoke:operator-review && npm run smoke:browser && npm run smoke:control && npm run smoke:web-console && npm run smoke:authorized-target && npm run smoke:workspace && npm run smoke:auth && npm run smoke:entra-auth && npm run smoke:entra-callback-proxy && npm run smoke:deployment-bootstrap && npm run smoke:security-blockers && npm run smoke:authorization-registry && npm run smoke:workspace-docker && npm run smoke:document-team && npm run smoke:steel-capacity && npm run smoke:compiler && npm run smoke:events-reconcile",
     "worker": "tsx bin/worker.ts"
   },
   "dependencies": {

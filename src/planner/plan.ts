@@ -124,7 +124,7 @@ export function plan(spec: EventSpec): Plan {
       dependsOn: [details],
       procedure: "site/apply-theme",
       payload: { theme: spec.theme },
-      label: `Apply theme "${spec.theme.templateName}"`,
+      label: spec.theme.templateName ? `Apply theme "${spec.theme.templateName}"` : "Apply theme colors",
     });
     siteTasks.push(theme);
   }
