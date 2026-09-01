@@ -5,21 +5,7 @@ import type { RRNormalizedPreview } from "../lib/rr-normalize";
 
 interface RRPreviewResponse {
   file: { name: string; size: number; type: "xlsx" | "csv" };
-  preview: {
-    event: {
-      name: string | null;
-      location: string | null;
-      timezoneSource: string | null;
-      expoDatesSource: string | null;
-      conferenceDatesSource: string | null;
-      themeSource: string | null;
-    };
-    registrationTypes: Array<{ key: string; name: string; code: string }>;
-    questions: Array<{ key: string; text: string; answerType: string }>;
-    recognizedSheets: string[];
-    ignoredSheets: string[];
-    warnings: string[];
-  };
+  preview: RRNormalizedPreview;
 }
 
 export function RRDocumentImport({ onApply }: { onApply?: (preview: RRNormalizedPreview) => void }) {
@@ -27,6 +13,8 @@ export function RRDocumentImport({ onApply }: { onApply?: (preview: RRNormalized
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<RRPreviewResponse | null>(null);
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
+  const [converting, setConverting] = useState(false);
   const [error, setError] = useState("");
 
   const inspect = async (file?: File) => {
@@ -34,6 +22,7 @@ export function RRDocumentImport({ onApply }: { onApply?: (preview: RRNormalized
     setLoading(true);
     setError("");
     setResult(null);
+    setSourceFile(null);
     try {
       const form = new FormData();
       form.set("file", file);
@@ -41,12 +30,27 @@ export function RRDocumentImport({ onApply }: { onApply?: (preview: RRNormalized
       const body = (await response.json()) as RRPreviewResponse & { error?: string };
       if (!response.ok || !body.preview) throw new Error(body.error || "The RR document could not be read.");
       setResult(body);
+      setSourceFile(file);
     } catch (inspectError) {
       setError(inspectError instanceof Error ? inspectError.message : "The RR document could not be read.");
     } finally {
       setLoading(false);
       if (input.current) input.current.value = "";
     }
+  };
+
+  const convert = async () => {
+    if (!sourceFile) return;
+    setConverting(true); setError("");
+    try {
+      const form = new FormData(); form.set("file", sourceFile);
+      const response = await fetch("/api/rr-convert", { method: "POST", body: form });
+      if (!response.ok) { const body = await response.json() as { error?: string }; throw new Error(body.error || "Legacy RR conversion failed."); }
+      const blob = await response.blob(); const disposition = response.headers.get("content-disposition") ?? "";
+      const name = disposition.match(/filename="([^"]+)"/)?.[1] ?? "Converted_New_RR.xlsx";
+      const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Legacy RR conversion failed."); }
+    finally { setConverting(false); }
   };
 
   return (
@@ -78,7 +82,7 @@ export function RRDocumentImport({ onApply }: { onApply?: (preview: RRNormalized
             <div><small>Allowed sheets used</small><strong>{result.preview.recognizedSheets.length}</strong><span>{result.preview.ignoredSheets.length} sheets excluded</span></div>
           </div>
           <p><b>Next gate:</b> apply recognized values to the EventSpec, review every field, then queue. The raw workbook can never execute directly.</p>
-          {onApply && <button className="primary-small rr-apply" type="button" onClick={() => onApply(result.preview)}>Apply recognized values to EventSpec</button>}
+          <div className="rr-convert-actions">{onApply && <button className="primary-small rr-apply" type="button" onClick={() => onApply(result.preview)}>Apply recognized values to EventSpec</button>}<button className="secondary-button" type="button" disabled={!sourceFile || converting || result.file.type !== "xlsx"} onClick={() => void convert()}>{converting ? "Converting…" : "Download converted new RR workbook"}</button></div>
         </div>
       )}
     </section>

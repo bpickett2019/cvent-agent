@@ -3,7 +3,7 @@ import type { EventSpec, Question } from "../../src/spec/eventSpec";
 export interface RRNormalizedPreview {
   event: { name: string | null; location: string | null; timezoneSource: string | null; expoDatesSource: string | null; conferenceDatesSource: string | null; themeSource: string | null };
   registrationTypes: Array<{ key: string; name: string; code: string }>;
-  questions: Array<{ key: string; text: string; answerType: string }>;
+  questions: Array<{ key: string; text: string; page?: "personal-information" | "show-questions"; answerType: string; answerValues?: string[]; required?: boolean; visibilitySource?: string }>;
   recognizedSheets: string[];
   ignoredSheets: string[];
   warnings: string[];
@@ -18,7 +18,7 @@ export function mergeRRPreview(seed: EventSpec, preview: RRNormalizedPreview): E
   if (preview.registrationTypes.length) spec.registrationTypes = preview.registrationTypes.map((value) => ({ key: value.key, name: value.name, description: "" }));
   if (preview.questions.length) spec.questions = preview.questions.map((value, index) => {
     const answerType = answerTypes.has(value.answerType as Question["answerType"]) ? value.answerType as Question["answerType"] : "text";
-    return { key: value.key, text: value.text, page: "personal-information", order: index, answerType, answerValues: [], required: false, visibility: { type: "always" } };
+    return { key: value.key, text: value.text, page: value.page ?? "personal-information", order: index, answerType, answerValues: value.answerValues ?? [], required: value.required ?? false, visibility: { type: "always" } };
   });
   return spec;
 }
