@@ -26,6 +26,8 @@ assert.match(monitor, /iframe/i);
 assert.match(monitor, /Cancel run/);
 const dashboard = await readFile("web/components/operator-dashboard.tsx", "utf8");
 const golden = await readFile("web/components/golden-login.tsx", "utf8");
+const jobsRoute = await readFile("web/app/api/jobs/route.ts", "utf8");
 assert.match(dashboard, /GoldenLogin/);
 assert.match(golden, /Golden Cvent login/i);
+assert.match(jobsRoute, /startLocalWorker/);
 console.log("web console smoke passed");

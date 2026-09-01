@@ -82,10 +82,13 @@ export class SteelProvider implements BrowserProvider {
       debugUrl?: string;
     };
 
-    const browser = await chromium.connectOverCDP(session.websocketUrl);
+    const websocketUrl = rebaseProviderUrl(session.websocketUrl, base, true);
+    const rawViewer = this.cfg.baseUrl ? session.debugUrl ?? session.sessionViewerUrl : session.sessionViewerUrl ?? session.debugUrl;
+    const viewerUrl = rawViewer ? rebaseProviderUrl(rawViewer, base, false) : undefined;
+    const browser = await chromium.connectOverCDP(websocketUrl);
     return {
       browser,
-      viewerUrl: session.sessionViewerUrl ?? session.debugUrl,
+      viewerUrl,
       providerSessionId: session.id,
       release: async () => {
         await browser.close().catch(() => {});
@@ -267,6 +270,14 @@ export class BrowserSession {
   async close(): Promise<void> {
     await this.release();
   }
+}
+
+function rebaseProviderUrl(raw: string, base: string, websocket: boolean): string {
+  const source = new URL(raw);
+  const target = new URL(base);
+  source.protocol = websocket ? (target.protocol === "https:" ? "wss:" : "ws:") : target.protocol;
+  source.host = target.host;
+  return source.toString();
 }
 
 /** Values never land in the trail verbatim — the audit log is retained. */

@@ -15,13 +15,34 @@ export async function goldenStatus(): Promise<{ status: "ready" | "missing"; mai
 
 export async function startLoginMaintenance(): Promise<MaintenanceState> {
   if (maintenance) return maintenance;
-  const response = await fetch(`${baseUrl()}/v1/sessions`, { method: "POST", headers: headers(), body: JSON.stringify({ persistProfile: false, timeout: 3_600_000, headless: false, debugConfig: { interactive: true, systemCursor: true } }) });
+  const response = await fetch(`${baseUrl()}/v1/sessions`, { method: "POST", headers: headers(), body: JSON.stringify({ persistProfile: false, timeout: 3_600_000, headless: true, debugConfig: { interactive: true, systemCursor: true } }) });
   if (!response.ok) throw new Error(`Steel maintenance session failed: ${response.status} ${await response.text()}`);
-  const session = await response.json() as { id: string; sessionViewerUrl?: string; debugUrl?: string };
-  const viewerUrl = session.sessionViewerUrl ?? session.debugUrl;
+  const session = await response.json() as { id: string; websocketUrl: string; sessionViewerUrl?: string; debugUrl?: string };
+  const rawViewer = session.debugUrl ?? session.sessionViewerUrl;
+  const viewerUrl = rawViewer ? rebaseUrl(rawViewer) : undefined;
   if (!viewerUrl) throw new Error("Steel did not provide a live viewer URL");
   maintenance = { sessionId: session.id, viewerUrl, startedAt: new Date().toISOString() };
+  await navigateCdp(rebaseWebSocket(session.websocketUrl), process.env.CVENT_APP_URL ?? "https://app.cvent.com/");
   return maintenance;
+}
+
+function rebaseUrl(raw: string): string { const source = new URL(raw); const target = new URL(baseUrl()); source.protocol = target.protocol; source.host = target.host; return source.toString(); }
+function rebaseWebSocket(raw: string): string { const source = new URL(raw); const target = new URL(baseUrl()); source.protocol = target.protocol === "https:" ? "wss:" : "ws:"; source.host = target.host; return source.toString(); }
+async function navigateCdp(websocketUrl: string, url: string): Promise<void> {
+  const socket = new WebSocket(websocketUrl); let id = 0;
+  await new Promise<void>((resolveOpen, reject) => { socket.addEventListener("open", () => resolveOpen(), { once: true }); socket.addEventListener("error", () => reject(new Error("Steel CDP connection failed")), { once: true }); });
+  const command = <T>(method: string, params: Record<string, unknown> = {}, sessionId?: string) => new Promise<T>((resolveCommand, reject) => {
+    const commandId = ++id;
+    const listener = (event: MessageEvent) => { try { const message = JSON.parse(String(event.data)) as { id?: number; result?: T; error?: { message?: string } }; if (message.id !== commandId) return; socket.removeEventListener("message", listener); if (message.error) reject(new Error(message.error.message ?? `${method} failed`)); else resolveCommand(message.result as T); } catch { /* wait for a valid CDP record */ } };
+    socket.addEventListener("message", listener); socket.send(JSON.stringify({ id: commandId, method, params, ...(sessionId ? { sessionId } : {}) }));
+  });
+  try {
+    const targets = await command<{ targetInfos: Array<{ targetId: string; type: string }> }>("Target.getTargets");
+    const target = targets.targetInfos.find((value) => value.type === "page") ?? await command<{ targetId: string }>("Target.createTarget", { url: "about:blank" });
+    const targetId = "targetId" in target ? target.targetId : undefined; if (!targetId) throw new Error("Steel browser has no page target");
+    const attached = await command<{ sessionId: string }>("Target.attachToTarget", { targetId, flatten: true });
+    await command("Page.navigate", { url }, attached.sessionId);
+  } finally { socket.close(); }
 }
 
 export async function captureGoldenLogin(): Promise<void> {

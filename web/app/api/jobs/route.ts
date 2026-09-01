@@ -7,6 +7,7 @@ import {
 } from "../../../../src/queue/runJob";
 import { EventSpec } from "../../../../src/spec/eventSpec";
 import { jobQueue, publicJob, runControls } from "../../../lib/job-server";
+import { startLocalWorker } from "../../../lib/worker-launcher";
 
 export const runtime = "nodejs";
 
@@ -29,8 +30,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       },
     });
     const control = await runControls().initialize(job.id);
+    const worker = startLocalWorker();
     return NextResponse.json(
-      { job: publicJob(job, control), specHash },
+      { job: publicJob(job, control), specHash, worker },
       { status: job.attempts === 0 && job.status === "queued" ? 202 : 200 }
     );
   } catch (error) {
