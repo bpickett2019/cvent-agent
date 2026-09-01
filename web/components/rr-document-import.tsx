@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import type { RRNormalizedPreview } from "../lib/rr-normalize";
 
 interface RRPreviewResponse {
   file: { name: string; size: number; type: "xlsx" | "csv" };
@@ -21,7 +22,7 @@ interface RRPreviewResponse {
   };
 }
 
-export function RRDocumentImport() {
+export function RRDocumentImport({ onApply }: { onApply?: (preview: RRNormalizedPreview) => void }) {
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -76,7 +77,8 @@ export function RRDocumentImport() {
             <div><small>Questions</small><strong>{result.preview.questions.length}</strong><span>recognized definitions</span></div>
             <div><small>Allowed sheets used</small><strong>{result.preview.recognizedSheets.length}</strong><span>{result.preview.ignoredSheets.length} sheets excluded</span></div>
           </div>
-          <p><b>Next gate:</b> constrained AI normalization into EventSpec, then operator review. The raw workbook can never execute directly.</p>
+          <p><b>Next gate:</b> apply recognized values to the EventSpec, review every field, then queue. The raw workbook can never execute directly.</p>
+          {onApply && <button className="primary-small rr-apply" type="button" onClick={() => onApply(result.preview)}>Apply recognized values to EventSpec</button>}
         </div>
       )}
     </section>

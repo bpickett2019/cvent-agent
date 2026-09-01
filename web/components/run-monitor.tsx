@@ -23,6 +23,7 @@ export function RunMonitor() {
   const [jobs, setJobs] = useState<MonitoredJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<Record<string, string>>({});
+  const [selectedViewer, setSelectedViewer] = useState<{ url: string; eventName: string } | null>(null);
   const [error, setError] = useState("");
 
   const refresh = useCallback(async () => {
@@ -72,6 +73,7 @@ export function RunMonitor() {
       </header>
 
       <div className="safety-notice"><span>!</span><div><strong>Pause is a cooperative safety stop.</strong><p>An action already sent to Cvent may finish. No new browser action or task starts until Resume. Use Cancel to halt the run and send partial work to triage.</p></div></div>
+      {selectedViewer && <section className="steel-viewer-panel"><header><div><span className="eyebrow">Steel live viewer</span><h2>{selectedViewer.eventName}</h2></div><div><a href={selectedViewer.url} target="_blank" rel="noreferrer" className="viewer-button">Open full screen ↗</a><button type="button" onClick={() => setSelectedViewer(null)}>Close viewer</button></div></header><iframe src={selectedViewer.url} title={`Steel live viewer for ${selectedViewer.eventName}`} sandbox="allow-scripts allow-same-origin allow-forms allow-popups" /></section>}
       {error && <div className="notice error-summary" role="alert"><strong>Run control error.</strong><span>{error}</span></div>}
       {loading && <div className="empty-row">Loading durable queue…</div>}
       {!loading && jobs.length === 0 && <div className="empty-row">No queued runs yet. Submit a valid EventSpec from Event intake.</div>}
@@ -88,7 +90,7 @@ export function RunMonitor() {
                 <div className="monitor-facts"><div><small>Worker state</small><strong>{isPaused ? "Waiting for operator" : statusLabel(job.status)}</strong></div><div><small>Browser</small><strong>{job.control.viewerUrl ? "Steel connected" : isActive ? "Opening session" : "Not active"}</strong></div><div><small>Attempt</small><strong>{job.attempts || "Not started"}</strong></div></div>
                 {(job.error || job.output?.triageSummary) && <p className="monitor-detail">{job.error || job.output?.triageSummary}</p>}
                 <div className="monitor-actions">
-                  {job.control.viewerUrl ? <a href={job.control.viewerUrl} target="_blank" rel="noreferrer" className="viewer-button">View live browser ↗</a> : <button disabled className="viewer-button disabled">Live browser unavailable</button>}
+                  {job.control.viewerUrl ? <><button className="viewer-button" onClick={() => setSelectedViewer({ url: job.control.viewerUrl!, eventName: job.eventName })}>Watch in console</button><a href={job.control.viewerUrl} target="_blank" rel="noreferrer" className="viewer-button">Open ↗</a></> : <button disabled className="viewer-button disabled">Live browser unavailable</button>}
                   {!terminal && !isPaused && <button className="pause-button" disabled={Boolean(pending[job.id])} onClick={() => void control(job, "pause")}>{pending[job.id] === "pause" ? "Pausing…" : "Ⅱ Pause run"}</button>}
                   {!terminal && isPaused && <button className="resume-button" disabled={Boolean(pending[job.id])} onClick={() => void control(job, "resume")}>{pending[job.id] === "resume" ? "Resuming…" : "▶ Resume run"}</button>}
                   {!terminal && <button className="cancel-run-button" disabled={Boolean(pending[job.id])} onClick={() => void control(job, "cancel")}>{pending[job.id] === "cancel" ? "Cancelling…" : "Cancel run"}</button>}

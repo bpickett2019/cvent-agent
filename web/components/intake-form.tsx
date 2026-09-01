@@ -5,6 +5,7 @@ import { EventSpec as EventSpecSchema, type EventSpec, type Question } from "../
 import type { ZodIssue } from "zod";
 import { ImageRefField } from "./image-ref-field";
 import { RRDocumentImport } from "./rr-document-import";
+import { mergeRRPreview } from "../lib/rr-normalize";
 
 type RegistrationType = EventSpec["registrationTypes"][number];
 type AdmissionItem = EventSpec["registration"]["admissionItems"][number];
@@ -110,7 +111,7 @@ export function IntakeForm({ seed }: IntakeFormProps) {
         </div>
       )}
 
-      <RRDocumentImport />
+      <RRDocumentImport onApply={(preview) => { setSpec((current: EventSpec) => mergeRRPreview(current, preview)); setSubmitted(false); setSubmissionError(""); setQueuedJobId(""); submissionKey.current = crypto.randomUUID(); }} />
 
       <Section number="01" title="Event details" description="The event shell is cloned first, then these details are applied through the API.">
         <div className="form-grid three">

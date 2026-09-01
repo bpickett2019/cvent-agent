@@ -12,7 +12,8 @@
     "smoke:rr": "tsx rr.smoke.ts",
     "smoke:browser": "tsx browser.smoke.ts",
     "smoke:control": "tsx control.smoke.ts",
-    "test": "npm run typecheck && npm run smoke && npm run smoke:executor && npm run smoke:run && npm run smoke:queue && npm run smoke:assets && npm run smoke:rr && npm run smoke:browser && npm run smoke:control",
+    "smoke:web-console": "tsx web-console.smoke.ts",
+    "test": "npm run typecheck && npm run smoke && npm run smoke:executor && npm run smoke:run && npm run smoke:queue && npm run smoke:assets && npm run smoke:rr && npm run smoke:browser && npm run smoke:control && npm run smoke:web-console",
     "worker": "tsx bin/worker.ts"
   },
   "dependencies": {
