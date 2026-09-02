@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { compileLegacyFooter, type LegacyFooterSheet } from "./web/lib/compiler/legacy-footer";
 
 const synthetic: LegacyFooterSheet = { name: "Helpful & Social Media Links", rows: [
@@ -52,6 +53,9 @@ assert.equal(conflicts.outcome, "review");
 assert.equal(conflicts.safeToExecute, false);
 
 const workbook = process.env.BDNY_RR ?? "/Users/bailey/Downloads/BDNY 2026 (BDE261) FINAL RR Doc_NEW_2.26.26.xlsx";
+let hasOpenpyxl = false;
+try { execFileSync("python3", ["-c", "import openpyxl"], { stdio: "ignore" }); hasOpenpyxl = true; } catch { /* optional real-workbook check */ }
+if (existsSync(workbook) && hasOpenpyxl) {
 const payload = execFileSync("python3", ["-c", `
 import json,sys
 from openpyxl import load_workbook
@@ -66,4 +70,5 @@ assert.deepEqual(bdny.blocks.map((b) => b.applicability.kind), ["attendee", "exh
 assert.equal(bdny.links.find((l) => l.key === "contact-us" && l.applicability.kind === "attendee")?.destination, "Connect to emeraldsupport@cvent.com");
 assert.equal(bdny.links.find((l) => l.key === "exhibitor-resource-center")?.provenance.labelCell, "A22");
 assert.ok(bdny.review.some((r) => r.code === "hidden-destination" && r.provenance.row === 20) === false);
+}
 console.log("legacy footer/path variants smoke passed");

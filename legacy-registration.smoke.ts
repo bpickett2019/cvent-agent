@@ -50,7 +50,9 @@ assert.ok(overflow.warnings.some((x) => /capacity.*pricing/i.test(x)));
 // The production-shaped fixture is checked above; when the authorized source workbook
 // is present locally, also smoke the parser against its actual cell values.
 const realWorkbook = "/Users/bailey/Downloads/BDNY 2026 (BDE261) FINAL RR Doc_NEW_2.26.26.xlsx";
-if (existsSync(realWorkbook)) {
+let hasOpenpyxl = false;
+try { execFileSync("python3", ["-c", "import openpyxl"], { stdio: "ignore" }); hasOpenpyxl = true; } catch { /* optional real-workbook check */ }
+if (existsSync(realWorkbook) && hasOpenpyxl) {
   const script = "import openpyxl,json,sys; w=openpyxl.load_workbook(sys.argv[1],data_only=True); print(json.dumps([{'name':s.title,'rows':[[c.isoformat() if hasattr(c,'isoformat') else c for c in r] for r in s.iter_rows(values_only=True)]} for s in w]))";
   const realSheets = JSON.parse(execFileSync("python3", ["-c", script, realWorkbook], { encoding: "utf8", maxBuffer: 20_000_000 })) as LegacySheet[];
   const real = compileLegacyRegistration(realSheets);
