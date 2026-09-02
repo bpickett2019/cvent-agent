@@ -53,6 +53,8 @@ AUTH_SECRET=<high-entropy-random-authjs-secret>
 
 For authenticated local OIDC development, use `EMERALDX_AUTH_BASE_URL=http://localhost:3000`. The legacy local-only bypass remains available only when all conditions are true: the process is not production, `EMERALDX_ALLOW_UNAUTHENTICATED_DEV=true`, and `EMERALDX_AUTH_BASE_URL` is unset or uses exactly `localhost`, `127.0.0.1`, or `::1`. Production always ignores the bypass and fails closed.
 
+For a time-bounded staging demonstration blocked on Entra redirect administration, `EMERALDX_ALLOW_PRIVATE_TUNNEL_PILOT=true` may bypass only the Emerald web login when `EMERALDX_AUTH_BASE_URL` is an explicit loopback origin. The service must remain bound to loopback behind an SSH tunnel. This does not bypass Cvent authentication, roles inside Cvent, exact-event authorization, same-origin checks, mutation serialization, or permanent safety prohibitions. Set it back to `false` immediately after Entra sign-in is available; never use it for a publicly reachable listener.
+
 ## Security behavior
 
 Auth.js performs OIDC discovery and validates token signature, issuer, audience and nonce; the provider additionally requires PKCE and state. Sessions use encrypted/signed JWT cookies with `HttpOnly`, `SameSite=Lax`, `Secure` in production, and an eight-hour maximum age. The console copies only recognized role strings into the session; tokens are never rendered or logged. Existing same-origin checks, exact Cvent target authorization, and permanent safety prohibitions remain in force after role authorization.

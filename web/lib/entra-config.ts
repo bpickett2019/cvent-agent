@@ -44,10 +44,12 @@ export function entraEnvironment(environment: NodeJS.ProcessEnv = process.env): 
 }
 
 export function allowUnauthenticatedDevelopment(environment: NodeJS.ProcessEnv = process.env): boolean {
-  if (environment.NODE_ENV === "production" || environment.EMERALDX_ALLOW_UNAUTHENTICATED_DEV !== "true") return false;
   try {
-    const hostname = new URL(environment.EMERALDX_AUTH_BASE_URL?.trim() || "http://localhost").hostname.toLowerCase();
-    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+    const configured = environment.EMERALDX_AUTH_BASE_URL?.trim();
+    const hostname = new URL(configured || "http://localhost").hostname.toLowerCase();
+    const loopback = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]" || hostname === "::1";
+    if (environment.EMERALDX_ALLOW_PRIVATE_TUNNEL_PILOT === "true") return Boolean(configured) && loopback;
+    return environment.NODE_ENV !== "production" && environment.EMERALDX_ALLOW_UNAUTHENTICATED_DEV === "true" && loopback;
   } catch {
     return false;
   }

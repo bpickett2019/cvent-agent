@@ -70,6 +70,17 @@ assert.equal(
 );
 
 assert.equal(
+  allowUnauthenticatedDevelopment({ NODE_ENV: "production", EMERALDX_ALLOW_PRIVATE_TUNNEL_PILOT: "true", EMERALDX_AUTH_BASE_URL: "http://localhost:4320" }),
+  true,
+  "an explicit production pilot bypass is allowed only behind an exact loopback SSH tunnel",
+);
+assert.equal(
+  allowUnauthenticatedDevelopment({ NODE_ENV: "production", EMERALDX_ALLOW_PRIVATE_TUNNEL_PILOT: "true", EMERALDX_AUTH_BASE_URL: "https://staging.example" }),
+  false,
+  "the private pilot bypass must fail closed for non-loopback origins",
+);
+
+assert.equal(
   allowUnauthenticatedDevelopment({
     NODE_ENV: "development",
     EMERALDX_ALLOW_UNAUTHENTICATED_DEV: "true",
