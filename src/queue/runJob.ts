@@ -6,6 +6,7 @@ export const RUN_EVENT_JOB_KIND = "event.run";
 export const RunEventJobPayload = z
   .object({
     spec: EventSpec,
+    authScopeId: z.string().uuid(),
     operator: z
       .object({
         id: z.string().min(1),

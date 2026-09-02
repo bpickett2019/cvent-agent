@@ -9,6 +9,7 @@ const workspace: SteelWorkspace = {
   id: "workspace-1",
   name: "Mutation worker",
   ownerJobId: "job-secret",
+  authScopeId: "document-secret",
   eventId: "event-1",
   access: "mutation",
   controller: "agent",
@@ -28,6 +29,7 @@ assert.equal("apiUrl" in dto, false);
 assert.equal("providerSessionId" in dto, false);
 assert.equal("containerId" in dto, false);
 assert.equal("ownerJobId" in dto, false);
+assert.equal("authScopeId" in dto, false);
 
 assert.doesNotThrow(() => assertSameOrigin(new Request("http://localhost:3000/api/workspaces", { method: "POST", headers: { origin: "http://localhost:3000" } })));
 assert.doesNotThrow(() => assertSameOrigin(new Request("http://127.0.0.1:3000/api/auth", { method: "POST", headers: { origin: "http://127.0.0.1:3000" } })));
@@ -66,10 +68,14 @@ assert.equal(authorizeOperatorRequest(new Request("http://localhost:3000/"), { p
 assert.equal(authorizeOperatorRequest(new Request("http://localhost:3000/"), { production: false, credentials: null, allowUnauthenticatedDevelopment: false }).authorized, false, "development bypass must be explicit");
 const proxySource = await readFile("web/proxy.ts", "utf8");
 const entraAuthSource = await readFile("web/auth.ts", "utf8");
+const goldenAuthRouteSource = await readFile("web/app/api/auth/route.ts", "utf8");
+const jobsRouteSource = await readFile("web/app/api/jobs/route.ts", "utf8");
 assert.match(proxySource, /export function proxy/);
 assert.match(proxySource, /import \{ auth \}/);
 assert.match(entraAuthSource, /authorized\(\{ auth, request \}\)/);
 assert.match(entraAuthSource, /authorizeRole\(auth, "Viewer"\)/);
+assert.doesNotMatch(goldenAuthRouteSource, /store\.refreshAuthentication/, "the default Golden seed must never overwrite every document-scoped login");
+assert.match(jobsRouteSource, /authScopeId:\s*randomUUID\(\)/, "every queued RR document must receive an immutable private login scope");
 
 const monitor = await readFile("web/components/run-monitor.tsx", "utf8");
 const cards = await readFile("web/components/agent-workspaces.tsx", "utf8");

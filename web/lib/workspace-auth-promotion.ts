@@ -35,7 +35,11 @@ export async function promoteWorkspaceAuthentication(args: PromotionArgs): Promi
   if (details.browserState?.userAgent) context.userAgent = details.browserState.userAgent;
   await (args.writeContext ?? writePrivateContext)(args.sessionPath, context);
   await args.manager.recordActivity(source.id, { type: "authentication_promoted", message: "This authenticated workspace was promoted to Golden" });
-  const siblings = (await args.manager.list()).filter((workspace) => workspace.id !== source.id && workspace.status === "ready");
+  const siblings = (await args.manager.list()).filter((workspace) =>
+    workspace.id !== source.id &&
+    workspace.status === "ready" &&
+    workspace.authScopeId === source.authScopeId
+  );
   const refreshed: WorkspacePromotionResult["refreshed"] = [];
   for (const sibling of siblings) {
     try { await args.manager.refreshAuthentication(sibling.id); refreshed.push({ id: sibling.id, status: "refreshed" }); }

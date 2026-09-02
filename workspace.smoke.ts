@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FileSteelWorkspaceManager, loadGoldenSessionContext, type SteelWorkspaceRuntime } from "./src/workspace/manager";
+import { FileSteelWorkspaceManager, loadGoldenSessionContext, scopedSessionContextPath, seedScopedSessionContext, type SteelWorkspaceRuntime } from "./src/workspace/manager";
 
 const root = await mkdtemp(join(tmpdir(), "cvent-workspaces-"));
 const starts: string[] = [];
@@ -19,16 +19,29 @@ const runtime: SteelWorkspaceRuntime = {
 const manager = new FileSteelWorkspaceManager(root, runtime, () => new Date("2026-09-01T12:00:00.000Z"));
 const eventA = "e712e34c-6117-4d13-bf4c-8ed54cf2b495";
 const goldenPath = join(root, "session.json");
+assert.notEqual(scopedSessionContextPath(goldenPath, "document-a"), scopedSessionContextPath(goldenPath, "document-b"));
+assert.equal(scopedSessionContextPath(goldenPath, "../../escape").startsWith(join(root, "sessions")), true);
 await writeFile(goldenPath, JSON.stringify({ cookies: [{ name: "session", value: "opaque", domain: ".example.com", path: "/" }], localStorage: { token: "opaque-storage" }, localStorageOrigin: "https://example.com", userAgent: "Stable Golden UA" }), { mode: 0o600 });
 await chmod(goldenPath, 0o600);
 const golden = await loadGoldenSessionContext(goldenPath);
 assert.equal(golden?.cookies.length, 1);
 assert.deepEqual(golden?.localStorage, { "https://example.com": { token: "opaque-storage" } });
 assert.equal(golden?.userAgent, "Stable Golden UA");
+const seededA = await seedScopedSessionContext(goldenPath, "document-a");
+const seededB = await seedScopedSessionContext(goldenPath, "document-b");
+assert.notEqual(seededA, seededB);
+assert.equal((await loadGoldenSessionContext(seededA))?.cookies.length, 1);
 const capRoot = await mkdtemp(join(tmpdir(), "cvent-workspace-cap-"));
 const capped = new FileSteelWorkspaceManager(capRoot, runtime, () => new Date("2026-09-01T12:00:00.000Z"));
-for (let index = 0; index < 6; index += 1) await capped.create({ name: `agent-${index}`, jobId: `job-cap-${index}`, eventId: `event-cap-${index}`, access: "readOnly" });
-await assert.rejects(capped.create({ name: "agent-7", jobId: "job-cap-7", eventId: "event-cap-7", access: "readOnly" }), /workspace limit of 6/i);
+for (const jobId of ["job-cap-a", "job-cap-b", "job-cap-c"]) {
+  for (let index = 0; index < 12; index += 1) {
+    const workspace = await capped.create({ name: `${jobId}-agent-${index}`, jobId, authScopeId: jobId, eventId: `${jobId}-event-${index}`, access: "readOnly" });
+    assert.equal(workspace.authScopeId, jobId);
+  }
+}
+assert.equal((await capped.list()).filter((workspace) => workspace.status === "ready").length, 36);
+await assert.rejects(capped.create({ name: "job-a-agent-13", jobId: "job-cap-a", authScopeId: "job-cap-a", eventId: "event-cap-a-13", access: "readOnly" }), /per-job workspace limit of 12/i);
+await assert.rejects(capped.create({ name: "fourth-document", jobId: "job-cap-d", authScopeId: "job-cap-d", eventId: "event-cap-d", access: "readOnly" }), /active document limit of 3/i);
 await rm(capRoot, { recursive: true, force: true });
 starts.length = 0;
 stops.length = 0;

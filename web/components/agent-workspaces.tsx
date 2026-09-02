@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 interface WorkspaceView {
   id: string;
   name: string;
-  ownerJobId: string;
+
   eventId: string;
   access: "mutation" | "readOnly";
   controller?: "agent" | "user";
@@ -47,7 +47,7 @@ export function AgentWorkspaces({ onWatch }: { onWatch: (viewer: { url: string; 
   };
   const active = workspaces.filter((workspace) => workspace.status === "starting" || workspace.status === "ready");
   return <section className="workspace-browser-board">
-    <header className="workspace-board-head"><div><span>ISOLATED BROWSER WORKSPACES</span><h2>Agent workspaces</h2><p>Dedicated Chromium sessions with shared golden login and independent ownership.</p></div><strong>{active.length} active</strong></header>
+    <header className="workspace-board-head"><div><span>ISOLATED BROWSER WORKSPACES</span><h2>Agent workspaces</h2><p>Dedicated Chromium sessions with document-scoped login contexts and independent ownership.</p></div><strong>{active.length} active · 12 per document · 36 global</strong></header>
     {error && <div className="workspace-board-error">{error}</div>}
     {active.length === 0 && <div className="empty-row">Workspaces appear automatically when an AI agent is deployed.</div>}
     <div className="workspace-browser-grid">
@@ -62,7 +62,7 @@ export function AgentWorkspaces({ onWatch }: { onWatch: (viewer: { url: string; 
           <span className="workspace-preview-shield" />
         </div>
         <div className="workspace-card-meta"><span className={`workspace-status-chip ${workspace.status}`}>{authRequired ? "Waiting for login" : workspace.status === "ready" ? "Running" : "Starting"}</span><strong title={workspace.name}>{workspace.name}</strong><span className="workspace-browser-owner">Steel Chromium</span></div>
-        <div className="workspace-card-footer"><span>{workspace.access === "mutation" ? "Mutation lease" : "Read-only"} · {workspace.id.slice(0, 8)}</span><div><button onClick={() => workspace.viewerUrl && onWatch({ url: workspace.viewerUrl, eventName: workspace.name, workspaceId: workspace.id, interactive: false })}>View</button><button disabled={busy === workspace.id} onClick={() => void action("promote-login", workspace.id)}>Use login everywhere</button><button className="workspace-stop" disabled={busy === workspace.id} onClick={() => void action("release", workspace.id)}>{busy === workspace.id ? "…" : "Stop"}</button></div></div>
+        <div className="workspace-card-footer"><span>{workspace.access === "mutation" ? "Mutation lease" : "Read-only"} · {workspace.id.slice(0, 8)}</span><div><button onClick={() => workspace.viewerUrl && onWatch({ url: workspace.viewerUrl, eventName: workspace.name, workspaceId: workspace.id, interactive: false })}>View</button><button disabled={busy === workspace.id} onClick={() => void action("promote-login", workspace.id)}>Use login for this document</button><button className="workspace-stop" disabled={busy === workspace.id} onClick={() => void action("release", workspace.id)}>{busy === workspace.id ? "…" : "Stop"}</button></div></div>
         <div className="workspace-activity"><span>Agent activity</span><strong>{latest?.message ?? "Waiting for agent report"}</strong><ol className="workspace-activity-list">{workspace.activity?.slice(-4).reverse().map((entry) => <li key={`${entry.at}-${entry.type}`}><time>{new Date(entry.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</time><span>{entry.message}</span></li>)}</ol></div>
         <div className="workspace-control-dock"><span className="workspace-pause-mark">Ⅱ</span><span className="workspace-agent-mark">✣</span><div><strong>{workspace.name}</strong><small>{workspace.controller === "user" ? "You are in control" : authRequired ? "Agent waiting for login" : "Agent is in control"}</small></div>{workspace.controller === "user" ? <button className="workspace-takeover" onClick={() => void action("return", workspace.id)}>Return</button> : <button className="workspace-takeover" onClick={async () => { if (await action("takeover", workspace.id)) workspace.viewerUrl && onWatch({ url: workspace.viewerUrl, eventName: workspace.name, workspaceId: workspace.id, interactive: true }); }}>Take over</button>}<button className="workspace-dock-stop" disabled={busy === workspace.id} onClick={() => void action("release", workspace.id)}>Stop</button></div>
       </article>})}

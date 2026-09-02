@@ -34,6 +34,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       maxAttempts: 3,
       payload: {
         spec,
+        authScopeId: randomUUID(),
         operator,
         requestedAt: new Date().toISOString(),
       },

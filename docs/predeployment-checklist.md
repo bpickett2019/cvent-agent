@@ -119,7 +119,8 @@ Current measured nominal coverage: approximately 17 of 107 contract fields. Assi
 ## G. Steel workspaces and Run Monitor
 
 - [x] One Docker container/Chromium runtime per agent workspace.
-- [x] Maximum six active workspaces.
+- [x] Maximum 12 active workspaces per RR document/job, three active documents, and 36 workspaces globally.
+- [x] Golden browser contexts are private and document-scoped; login refresh never crosses document boundaries.
 - [x] Workspace exists only while an agent/job owns it in production UI path.
 - [x] Three-hour session timeout.
 - [x] Same-host egress and isolated API/CDP/viewer ports.
@@ -209,7 +210,7 @@ Current measured nominal coverage: approximately 17 of 107 contract fields. Assi
 - [ ] Service Bus dead-letter alerts.
 - [ ] PostgreSQL backup/PITR policy.
 - [ ] Blob retention/immutability policy.
-- [ ] Cost/resource limits for six concurrent Steel browsers.
+- [ ] Load-test and approve VM CPU/RAM/disk limits for up to 36 concurrent Steel browsers (12 per document, three documents).
 - [ ] Health/readiness/liveness endpoints.
 - [ ] On-call and incident runbooks.
 

@@ -18,7 +18,7 @@ import { FileRunControlStore, RunCancelledError } from "../src/run/control";
 import { FileRunStore } from "../src/run/fileStore";
 import { runEvent } from "../src/run/orchestrator";
 import { authorizeEventSpec, loadAuthorizationRegistry } from "../src/safety/authorizationRegistry";
-import { DockerSteelWorkspaceRuntime, FileSteelWorkspaceManager, type SteelWorkspace } from "../src/workspace/manager";
+import { DockerSteelWorkspaceRuntime, FileSteelWorkspaceManager, scopedSessionContextPath, seedScopedSessionContext, type SteelWorkspace } from "../src/workspace/manager";
 import { loadCapturedSession, message, parseArgs, requiredEnv } from "./shared";
 
 const HELP = `Usage: npx tsx bin/worker.ts [--once] [--local] [--headed]
@@ -107,11 +107,16 @@ async function executeRun(
     );
   }
   const assetPaths = await new AssetStore(resolve(args.values.get("asset-dir") ?? process.env.EMERALDX_ASSET_DIR ?? ".assets")).resolveSpec(payload.spec);
-  const sessionContext = await loadCapturedSession(args.values.get("session") ?? "session.json");
+  const sessionBasePath = resolve(args.values.get("session") ?? process.env.EMERALDX_SESSION_PATH ?? "session.json");
+  const sessionContextPath = await seedScopedSessionContext(sessionBasePath, payload.authScopeId);
+  const sessionContext = await loadCapturedSession(sessionContextPath);
   const workspaceManager = !args.flags.has("local") && process.env.EMERALDX_STEEL_WORKSPACE_MODE === "containers"
     ? new FileSteelWorkspaceManager(
         resolve(process.env.EMERALDX_WORKSPACE_DIR ?? ".workspaces"),
-        new DockerSteelWorkspaceRuntime({ image: process.env.STEEL_WORKSPACE_IMAGE?.trim() || undefined })
+        new DockerSteelWorkspaceRuntime({
+          image: process.env.STEEL_WORKSPACE_IMAGE?.trim() || undefined,
+          sessionContextPath: (candidate) => scopedSessionContextPath(sessionBasePath, candidate.authScopeId),
+        })
       )
     : null;
   let workspace: SteelWorkspace | null = null;
@@ -119,6 +124,7 @@ async function executeRun(
     workspace = await workspaceManager.create({
       name: `Cvent mutation worker ${jobId}`,
       jobId,
+      authScopeId: payload.authScopeId,
       eventId: payload.spec.target!.mode === "existingEvent"
         ? payload.spec.target!.eventId
         : payload.spec.target!.templateEventId,

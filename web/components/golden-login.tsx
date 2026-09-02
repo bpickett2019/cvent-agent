@@ -35,12 +35,12 @@ export function GoldenLogin() {
   };
 
   const dialog = viewer && mounted ? createPortal(
-    <div className="modal-backdrop golden-login-modal" role="dialog" aria-modal="true" aria-label="Golden Cvent login">
+    <div className="modal-backdrop golden-login-modal" role="dialog" aria-modal="true" aria-label="Default Cvent login">
       <section className="modal-card">
-        <button className="modal-close" aria-label="Close golden login" onClick={() => setViewer(null)}>×</button>
-        <span className="eyebrow">Golden Cvent login</span>
-        <h2>Authenticate once for every worker</h2>
-        <p>Complete Cvent login and MFA in the Steel viewer, then save the refreshed browser context.</p>
+        <button className="modal-close" aria-label="Close default login" onClick={() => setViewer(null)}>×</button>
+        <span className="eyebrow">Default Cvent login</span>
+        <h2>Seed new document teams</h2>
+        <p>Complete Cvent login and MFA in the Steel viewer, then save the default context. Each document team receives an isolated copy; changing one document login never refreshes another document.</p>
         <iframe src={viewer} title="Steel Cvent login viewer" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" />
         <div className="modal-actions"><a className="secondary-button" href={viewer} target="_blank" rel="noreferrer">Open full screen ↗</a><button className="approve-button" disabled={busy} onClick={() => void action("capture")}>Save refreshed login</button></div>
         {error && <p className="inline-error">{error}</p>}
@@ -49,7 +49,7 @@ export function GoldenLogin() {
   ) : null;
 
   return <>
-    <button className={`golden-login-pill ${status}`} onClick={() => void action("start")} disabled={busy}><span />Golden Cvent login · {status}</button>
+    <button className={`golden-login-pill ${status}`} onClick={() => void action("start")} disabled={busy}><span />Default Cvent login · {status}</button>
     {dialog}
   </>;
 }

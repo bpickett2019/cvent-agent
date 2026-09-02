@@ -1,7 +1,7 @@
 import { execFile as execFileCallback } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { chmod, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { createServer } from "node:net";
 import { promisify } from "node:util";
 
@@ -13,6 +13,7 @@ export interface SteelWorkspace {
   id: string;
   name: string;
   ownerJobId: string;
+  authScopeId: string;
   eventId: string;
   access: WorkspaceAccess;
   controller: "agent" | "user";
@@ -32,6 +33,7 @@ export interface SteelWorkspace {
 export interface CreateSteelWorkspace {
   name: string;
   jobId: string;
+  authScopeId?: string;
   eventId: string;
   access: WorkspaceAccess;
   initialUrl?: string;
@@ -53,6 +55,9 @@ export interface SteelWorkspaceRuntime {
 
 interface WorkspaceDocument { workspaces: SteelWorkspace[] }
 
+export interface WorkspaceCapacityLimits { perJob: number; global: number; activeJobs: number }
+export const DEFAULT_WORKSPACE_CAPACITY: WorkspaceCapacityLimits = { perJob: 12, global: 36, activeJobs: 3 };
+
 export class FileSteelWorkspaceManager {
   private readonly statePath: string;
   private readonly lockPath: string;
@@ -60,7 +65,8 @@ export class FileSteelWorkspaceManager {
   constructor(
     private readonly root: string,
     private readonly runtime: SteelWorkspaceRuntime,
-    private readonly now: () => Date = () => new Date()
+    private readonly now: () => Date = () => new Date(),
+    private readonly capacity: WorkspaceCapacityLimits = DEFAULT_WORKSPACE_CAPACITY,
   ) {
     this.statePath = join(root, "workspaces.json");
     this.lockPath = join(root, ".lock");
@@ -71,14 +77,18 @@ export class FileSteelWorkspaceManager {
     if (input.initialUrl) { const parsed = new URL(input.initialUrl); if (parsed.hostname.endsWith("cvent.com") && !input.initialUrl.toLowerCase().includes(input.eventId.toLowerCase())) throw new Error("workspace initial Cvent URL must contain its exact event ID"); }
     const workspace = await this.withLock(async (document) => {
       const active = document.workspaces.filter((candidate) => ["starting", "ready"].includes(candidate.status));
-      if (active.length >= 6) throw new Error("workspace limit of 6 reached");
+      const activeForJob = active.filter((candidate) => candidate.ownerJobId === input.jobId);
+      if (activeForJob.length >= this.capacity.perJob) throw new Error(`per-job workspace limit of ${this.capacity.perJob} reached`);
+      const activeJobs = new Set(active.map((candidate) => candidate.ownerJobId));
+      if (!activeJobs.has(input.jobId) && activeJobs.size >= this.capacity.activeJobs) throw new Error(`active document limit of ${this.capacity.activeJobs} reached`);
+      if (active.length >= this.capacity.global) throw new Error(`global workspace limit of ${this.capacity.global} reached`);
       if (input.access === "mutation") {
         const owner = document.workspaces.find((candidate) => candidate.eventId === input.eventId && candidate.access === "mutation" && ["starting", "ready"].includes(candidate.status));
         if (owner) throw new Error(`mutation workspace already owns event ${input.eventId}: ${owner.id}`);
       }
       const timestamp = this.now().toISOString();
       const created: SteelWorkspace = {
-        id: randomUUID(), name: input.name.trim(), ownerJobId: input.jobId.trim(), eventId: input.eventId.trim(), access: input.access, controller: "agent",
+        id: randomUUID(), name: input.name.trim(), ownerJobId: input.jobId.trim(), authScopeId: input.authScopeId?.trim() || input.jobId.trim(), eventId: input.eventId.trim(), access: input.access, controller: "agent",
         status: "starting", createdAt: timestamp, updatedAt: timestamp, containerId: null, providerSessionId: null, apiUrl: null, viewerUrl: null, error: null,
         activity: [{ type: "workspace_started", message: input.assignment ? `Agent workspace is starting: ${input.assignment}` : "Agent workspace is starting", at: timestamp }],
         ...(input.initialUrl ? { initialUrl: input.initialUrl } : {}), ...(input.assignment ? { assignment: input.assignment.trim() } : {}),
@@ -153,7 +163,11 @@ export class FileSteelWorkspaceManager {
 
   private async read(): Promise<WorkspaceDocument> {
     await mkdir(this.root, { recursive: true, mode: 0o700 });
-    return readFile(this.statePath, "utf8").then((source) => JSON.parse(source) as WorkspaceDocument).catch((error: NodeJS.ErrnoException) => {
+    return readFile(this.statePath, "utf8").then((source) => {
+      const document = JSON.parse(source) as WorkspaceDocument;
+      document.workspaces = document.workspaces.map((workspace) => ({ ...workspace, authScopeId: workspace.authScopeId || workspace.ownerJobId }));
+      return document;
+    }).catch((error: NodeJS.ErrnoException) => {
       if (error.code === "ENOENT") return { workspaces: [] };
       throw error;
     });
@@ -186,10 +200,25 @@ export interface DockerSteelWorkspaceRuntimeOptions {
   image?: string;
   containerPrefix?: string;
   timeoutMs?: number;
-  sessionContextPath?: string;
+  sessionContextPath?: string | ((workspace: SteelWorkspace) => string);
 }
 
 export interface GoldenSessionContext { cookies: unknown[]; localStorage?: Record<string, Record<string, string>>; sessionStorage?: Record<string, Record<string, string>>; indexedDB?: Record<string, unknown[]>; userAgent?: string }
+export function scopedSessionContextPath(basePath: string, authScopeId: string): string {
+  if (!authScopeId.trim()) throw new Error("authentication scope is required");
+  const scopeHash = createHash("sha256").update(authScopeId.trim()).digest("hex");
+  return join(dirname(basePath), "sessions", `${scopeHash}.json`);
+}
+export async function seedScopedSessionContext(basePath: string, authScopeId: string): Promise<string> {
+  const scopedPath = scopedSessionContextPath(basePath, authScopeId);
+  if (await loadGoldenSessionContext(scopedPath)) return scopedPath;
+  const legacy = await loadGoldenSessionContext(basePath);
+  if (!legacy) throw new Error("no authenticated Golden context is available to seed this document");
+  await mkdir(dirname(scopedPath), { recursive: true, mode: 0o700 });
+  await writeFile(scopedPath, `${JSON.stringify(legacy, null, 2)}\n`, { mode: 0o600 });
+  await chmod(scopedPath, 0o600);
+  return scopedPath;
+}
 export async function loadGoldenSessionContext(path: string): Promise<GoldenSessionContext | undefined> {
   try {
     const metadata = await stat(path);
@@ -214,6 +243,12 @@ export function resolveWorkspaceImage(value = process.env.STEEL_WORKSPACE_IMAGE,
 export class DockerSteelWorkspaceRuntime implements SteelWorkspaceRuntime {
   constructor(private readonly options: DockerSteelWorkspaceRuntimeOptions = {}) {}
 
+  private sessionContextPath(workspace: SteelWorkspace): string | undefined {
+    return typeof this.options.sessionContextPath === "function"
+      ? this.options.sessionContextPath(workspace)
+      : this.options.sessionContextPath;
+  }
+
   async start(workspace: SteelWorkspace): Promise<StartedSteelWorkspace> {
     const image = resolveWorkspaceImage(this.options.image);
     const prefix = this.options.containerPrefix ?? "cvent-steel-worker";
@@ -226,7 +261,8 @@ export class DockerSteelWorkspaceRuntime implements SteelWorkspaceRuntime {
       await waitForHealthy(`${apiUrl}/documentation/`, this.options.timeoutMs ?? 60_000);
       let providerSessionId: string | undefined;
       if (workspace.access === "readOnly") {
-        const goldenContext = this.options.sessionContextPath ? await loadGoldenSessionContext(this.options.sessionContextPath) : undefined;
+        const contextPath = this.sessionContextPath(workspace);
+        const goldenContext = contextPath ? await loadGoldenSessionContext(contextPath) : undefined;
         const { userAgent, ...sessionContext } = goldenContext ?? { cookies: [] };
         const response = await fetch(`${apiUrl}/v1/sessions`, {
           method: "POST",
@@ -246,14 +282,15 @@ export class DockerSteelWorkspaceRuntime implements SteelWorkspaceRuntime {
 
   async refreshAuthentication(workspace: SteelWorkspace): Promise<{ providerSessionId: string }> {
     if (!workspace.apiUrl) throw new Error("workspace has no Steel API URL");
-    if (!this.options.sessionContextPath) throw new Error("golden session context path is not configured");
+    const contextPath = this.sessionContextPath(workspace);
+    if (!contextPath) throw new Error("golden session context path is not configured");
     let resumeUrl = workspace.initialUrl;
     if (!resumeUrl && workspace.providerSessionId) {
       const details = await fetch(`${workspace.apiUrl}/v1/sessions/${workspace.providerSessionId}/live-details`).then((response) => response.ok ? response.json() as Promise<{ pages?: Array<{ url?: string }> }> : undefined).catch(() => undefined);
       resumeUrl = details?.pages?.find((page) => page.url && page.url !== "about:blank")?.url;
     }
     if (workspace.providerSessionId) await fetch(`${workspace.apiUrl}/v1/sessions/${workspace.providerSessionId}/release`, { method: "POST", headers: { "content-type": "application/json" } }).catch(() => undefined);
-    const goldenContext = await loadGoldenSessionContext(this.options.sessionContextPath);
+    const goldenContext = await loadGoldenSessionContext(contextPath);
     const { userAgent, ...sessionContext } = goldenContext ?? { cookies: [] };
     const response = await fetch(`${workspace.apiUrl}/v1/sessions`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ persist: false, headless: true, sessionContext }) });
     if (!response.ok) throw new Error(`Steel workspace authentication refresh failed: ${response.status} ${await response.text()}`);

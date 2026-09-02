@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { NextResponse } from "next/server";
-import { DockerSteelWorkspaceRuntime, FileSteelWorkspaceManager } from "../../../../src/workspace/manager";
+import { DockerSteelWorkspaceRuntime, FileSteelWorkspaceManager, scopedSessionContextPath } from "../../../../src/workspace/manager";
 import { runControls } from "../../../lib/job-server";
 import { promoteWorkspaceAuthentication } from "../../../lib/workspace-auth-promotion";
 import { assertSameOrigin, publicWorkspace } from "../../../lib/request-security";
@@ -11,8 +11,11 @@ export const dynamic = "force-dynamic";
 
 function manager(): FileSteelWorkspaceManager {
   const root = resolve(/*turbopackIgnore: true*/ process.cwd(), "..", process.env.EMERALDX_WORKSPACE_DIR ?? ".workspaces");
-  const sessionContextPath = resolve(/*turbopackIgnore: true*/ process.cwd(), "..", process.env.EMERALDX_SESSION_PATH ?? "session.json");
-  return new FileSteelWorkspaceManager(root, new DockerSteelWorkspaceRuntime({ image: process.env.STEEL_WORKSPACE_IMAGE?.trim() || undefined, sessionContextPath }));
+  const sessionBasePath = resolve(/*turbopackIgnore: true*/ process.cwd(), "..", process.env.EMERALDX_SESSION_PATH ?? "session.json");
+  return new FileSteelWorkspaceManager(root, new DockerSteelWorkspaceRuntime({
+    image: process.env.STEEL_WORKSPACE_IMAGE?.trim() || undefined,
+    sessionContextPath: (workspace) => scopedSessionContextPath(sessionBasePath, workspace.authScopeId),
+  }));
 }
 
 export async function GET(): Promise<NextResponse> {
@@ -37,7 +40,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
     if (body.action === "promote-login" && body.id) {
       const store = manager();
-      const sessionPath = resolve(/*turbopackIgnore: true*/ process.cwd(), "..", process.env.EMERALDX_SESSION_PATH ?? "session.json");
+      const current = await store.get(body.id);
+      if (!current) throw new Error(`unknown workspace ${body.id}`);
+      const sessionBasePath = resolve(/*turbopackIgnore: true*/ process.cwd(), "..", process.env.EMERALDX_SESSION_PATH ?? "session.json");
+      const sessionPath = scopedSessionContextPath(sessionBasePath, current.authScopeId);
       return NextResponse.json({ promotion: await promoteWorkspaceAuthentication({ workspaceId: body.id, manager: store, sessionPath }) });
     }
     if ((body.action === "takeover" || body.action === "return") && body.id) {
