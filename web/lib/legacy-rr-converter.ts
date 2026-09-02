@@ -8,7 +8,7 @@ export function legacyPreviewAssignments(preview: RRNormalizedPreview): Workbook
     if (value === null || value === undefined || value === "") return;
     output.push({ sheet, cell, value: value as string | number | boolean, source, confidence });
   };
-  add("1. Event Setup", "C5", preview.event.name, "legacy Event Details > Event Name");
+  add("1. Event Setup", "C6", preview.event.name, "legacy Event Details > New Event Name");
   add("1. Event Setup", "C8", preview.event.location, "legacy Event Details > Event Location", "review");
   add("1. Event Setup", "C11", normalizeTimezone(preview.event.timezoneSource), "legacy Event Details > Time Zone", "review");
   add("1. Event Setup", "C13", preview.event.expoDatesSource, "legacy Event Details > Expo Hall Dates", "review");
@@ -16,14 +16,14 @@ export function legacyPreviewAssignments(preview: RRNormalizedPreview): Workbook
   add("1. Event Setup", "C21", preview.event.themeSource, "legacy Event Details > Event Theme", "review");
 
   preview.registrationTypes.slice(0, 50).forEach((type, index) => {
-    const row = 7 + index;
+    const row = 8 + index;
     add("4. Reg Types", `A${row}`, type.code, "legacy NEW REG MAPPING > Reg Type Code");
     add("4. Reg Types", `C${row}`, type.name, "legacy NEW REG MAPPING > Reg Type Name");
     add("4. Reg Types", `D${row}`, classifyRegistrationType(type.name), "derived from legacy Reg Type Name", "review");
   });
 
   preview.questions.slice(0, 100).forEach((question, index) => {
-    const row = 7 + index;
+    const row = 8 + index;
     add("9. Questions", `A${row}`, question.key.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 20), "legacy Show Questions > Demo Name");
     add("9. Questions", `B${row}`, (question.page ?? "personal-information") === "personal-information" ? "Profile" : "Show Questions", "legacy Show Questions > Page Displayed On");
     add("9. Questions", `C${row}`, "Individual - every registrant answers", "conversion default", "review");
@@ -32,7 +32,7 @@ export function legacyPreviewAssignments(preview: RRNormalizedPreview): Workbook
     add("9. Questions", `F${row}`, (question.answerValues ?? []).join(" ; "), "legacy Show Questions > Answer Text");
     add("9. Questions", `G${row}`, question.required ? "Yes" : "No", "legacy Show Questions > Required");
     add("9. Questions", `I${row}`, "Visible on the site", "conversion default", "review");
-    add("9. Questions", `K${row}`, question.visibilitySource ?? "", "legacy Show Questions > Registration Type Visibility", "review");
+    add("9. Questions", `H${row}`, question.visibilitySource ?? "", "legacy Show Questions > Registration Type Visibility", "review");
   });
   return output;
 }

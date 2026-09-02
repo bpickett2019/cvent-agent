@@ -5,7 +5,8 @@ import { EventSpec as EventSpecSchema, type EventSpec, type Question } from "../
 import type { ZodIssue } from "zod";
 import { ImageRefField } from "./image-ref-field";
 import { RRDocumentImport } from "./rr-document-import";
-import { mergeRRPreview } from "../lib/rr-normalize";
+
+import { authorizedExecutionError } from "../../src/safety/authorizedTarget";
 
 type RegistrationType = EventSpec["registrationTypes"][number];
 type AdmissionItem = EventSpec["registration"]["admissionItems"][number];
@@ -30,6 +31,8 @@ const answerTypes: Array<{ value: Question["answerType"]; label: string }> = [
   { value: "phone", label: "Phone" },
   { value: "fileUpload", label: "File upload" },
 ];
+const APPROVED_TEMPLATE_ID = "e712e34c-6117-4d13-bf4c-8ed54cf2b495";
+const APPROVED_TEMPLATE_NAME = "(C+D) Medtrade Testing Clone 2";
 
 export function IntakeForm({ seed }: IntakeFormProps) {
   const [spec, setSpec] = useState<EventSpec>(() => structuredClone(seed));
@@ -37,9 +40,13 @@ export function IntakeForm({ seed }: IntakeFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState("");
   const [queuedJobId, setQueuedJobId] = useState("");
+  const [targetMode, setTargetMode] = useState<"existingEvent" | "copyTemplate">(seed.target?.mode ?? "existingEvent");
+  const [rrApplied, setRrApplied] = useState(false);
   const submissionKey = useRef(crypto.randomUUID());
   const validation = useMemo(() => EventSpecSchema.safeParse(spec), [spec]);
   const issues = validation.success ? [] : validation.error.issues;
+  const authorizationError = validation.success ? authorizedExecutionError(validation.data) : null;
+  const readyToQueue = validation.success && !authorizationError && rrApplied;
 
   const update = (recipe: (draft: EventSpec) => void) => {
     setSubmitted(false);
@@ -54,7 +61,7 @@ export function IntakeForm({ seed }: IntakeFormProps) {
   };
 
   const submit = async () => {
-    if (!validation.success || submitting) return;
+    if (!validation.success || authorizationError || !rrApplied || submitting) return;
     setSubmitting(true);
     setSubmissionError("");
     try {
@@ -78,6 +85,15 @@ export function IntakeForm({ seed }: IntakeFormProps) {
     }
   };
 
+  const applyNormalizedSpec = (normalizedSpec: EventSpec) => {
+    const next = structuredClone(normalizedSpec);
+    if (targetMode === "copyTemplate") {
+      next.target = { mode: "copyTemplate", tenantId: "emerald-pilot", accountId: "emerald-cvent", templateEventId: APPROVED_TEMPLATE_ID, templateEventName: APPROVED_TEMPLATE_NAME, newEventName: next.details.name, ...(next.details.code ? { newEventCode: next.details.code } : {}) };
+      next.details.templateEventId = APPROVED_TEMPLATE_ID;
+    }
+    setSpec(next); setRrApplied(true); setSubmitted(false); setSubmissionError(""); setQueuedJobId(""); submissionKey.current = crypto.randomUUID();
+  };
+
   return (
     <div className="page-stack" id="intake-top">
       <PageIntro
@@ -85,9 +101,9 @@ export function IntakeForm({ seed }: IntakeFormProps) {
         title="Event intake"
         description="Define this year’s registration delta. Branding and page structure stay inherited unless explicitly changed."
         aside={
-          <div className={`validation-pill ${validation.success ? "valid" : "invalid"}`}>
+          <div className={`validation-pill ${readyToQueue ? "valid" : "invalid"}`}>
             <span className="status-dot" />
-            {validation.success ? "Ready to plan" : `${issues.length} item${issues.length === 1 ? "" : "s"} need attention`}
+            {readyToQueue ? "Ready to plan" : !rrApplied ? "Upload and apply an RR workbook" : authorizationError ? "Execution scope blocked" : `${issues.length} item${issues.length === 1 ? "" : "s"} need attention`}
           </div>
         }
       />
@@ -111,12 +127,20 @@ export function IntakeForm({ seed }: IntakeFormProps) {
         </div>
       )}
 
-      <RRDocumentImport onApply={(preview) => { setSpec((current: EventSpec) => mergeRRPreview(current, preview)); setSubmitted(false); setSubmissionError(""); setQueuedJobId(""); submissionKey.current = crypto.randomUUID(); }} />
+      {authorizationError && (
+        <div className="notice error-summary" role="alert">
+          <strong>Execution scope is blocked.</strong><span>{authorizationError}</span>
+        </div>
+      )}
 
-      <Section number="01" title="Event details" description="The event shell is cloned first, then these details are applied through the API.">
+      <RRDocumentImport onApply={applyNormalizedSpec} />
+
+      <section className="form-section"><div className="section-head"><span className="section-number">00</span><div><h2>Authorized Cvent target</h2><p>Choose the existing training clone or copy the explicitly approved template. New copies remain unpublished.</p></div></div><div className="section-body"><div className="segmented-control"><button type="button" className={targetMode === "existingEvent" ? "active" : ""} onClick={() => { setTargetMode("existingEvent"); update((draft) => { draft.target = { mode: "existingEvent", tenantId: "emerald-pilot", accountId: "emerald-cvent", eventId: APPROVED_TEMPLATE_ID, eventName: APPROVED_TEMPLATE_NAME }; draft.details.name = APPROVED_TEMPLATE_NAME; delete draft.details.templateEventId; }); }}>Use existing training event</button><button type="button" className={targetMode === "copyTemplate" ? "active" : ""} onClick={() => { setTargetMode("copyTemplate"); update((draft) => { draft.target = { mode: "copyTemplate", tenantId: "emerald-pilot", accountId: "emerald-cvent", templateEventId: APPROVED_TEMPLATE_ID, templateEventName: APPROVED_TEMPLATE_NAME, newEventName: draft.details.name, ...(draft.details.code ? { newEventCode: draft.details.code } : {}) }; draft.details.templateEventId = APPROVED_TEMPLATE_ID; }); }}>Copy approved template</button></div><div className="form-grid two"><Field label="Approved template name"><input value={APPROVED_TEMPLATE_NAME} readOnly /></Field><Field label="Approved template UUID"><input value={APPROVED_TEMPLATE_ID} readOnly /></Field></div></div></section>
+
+      <Section number="01" title="Event details" description="These reviewed details apply only to the authorized existing clone; no event is created or copied.">
         <div className="form-grid three">
           <Field label="Event name" error={fieldError(issues, "details.name")} className="span-2">
-            <input value={spec.details.name} onChange={(event) => update((draft) => void (draft.details.name = event.target.value))} />
+            <input value={spec.details.name} onChange={(event) => update((draft) => { draft.details.name = event.target.value; if (draft.target?.mode === "copyTemplate") draft.target.newEventName = event.target.value; })} />
           </Field>
           <Field label="Event code">
             <input value={spec.details.code ?? ""} onChange={(event) => update((draft) => void (draft.details.code = event.target.value || undefined))} />
@@ -219,8 +243,8 @@ export function IntakeForm({ seed }: IntakeFormProps) {
       <CommerceSections spec={spec} issues={issues} update={update} />
 
       <div className="submit-bar">
-        <div><strong>{validation.success ? "EventSpec is complete" : "EventSpec needs attention"}</strong><span>{validation.success ? `${spec.questions.length} questions and ${spec.registrationTypes.length} registration types are ready to plan.` : plainIssue(issues[0])}</span></div>
-        <button className="submit-button" disabled={!validation.success || submitting} onClick={() => void submit()}>{submitting ? "Queuing run…" : "Queue for execution"} <span>→</span></button>
+        <div><strong>{readyToQueue ? "EventSpec is complete and authorized" : "EventSpec needs attention"}</strong><span>{readyToQueue ? `${spec.questions.length} questions and ${spec.registrationTypes.length} registration types are ready to plan.` : !rrApplied ? "Upload and apply a reviewed RR workbook before queueing." : authorizationError ?? plainIssue(issues[0])}</span></div>
+        <button className="submit-button" disabled={!readyToQueue || submitting} onClick={() => void submit()}>{submitting ? "Queuing run…" : "Queue for execution"} <span>→</span></button>
       </div>
     </div>
   );

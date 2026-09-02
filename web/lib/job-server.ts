@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { FileJobQueue, type JobRecord } from "../../src/queue/jobQueue";
 import type { RunEventJobOutput, RunEventJobPayload } from "../../src/queue/runJob";
+import { publicRunStatus } from "../../src/queue/runDisposition";
 import { FileRunControlStore, type RunControlState } from "../../src/run/control";
 
 export function queueRoot(): string {
@@ -25,7 +26,7 @@ export function publicJob(
     kind: job.kind,
     eventName: job.payload.spec.details.name,
     eventCode: job.payload.spec.details.code ?? null,
-    status: job.status,
+    status: publicRunStatus(job.status, job.output?.status),
     attempts: job.attempts,
     maxAttempts: job.maxAttempts,
     error: job.error,

@@ -17,6 +17,8 @@ import {
 import { FileRunControlStore, RunCancelledError } from "../src/run/control";
 import { FileRunStore } from "../src/run/fileStore";
 import { runEvent } from "../src/run/orchestrator";
+import { authorizeEventSpec, loadAuthorizationRegistry } from "../src/safety/authorizationRegistry";
+import { DockerSteelWorkspaceRuntime, FileSteelWorkspaceManager, type SteelWorkspace } from "../src/workspace/manager";
 import { loadCapturedSession, message, parseArgs, requiredEnv } from "./shared";
 
 const HELP = `Usage: npx tsx bin/worker.ts [--once] [--local] [--headed]
@@ -98,6 +100,7 @@ async function executeRun(
   jobId: string
 ): Promise<RunOutput> {
   const sharePointPaths = sharePointAssetPaths(payload.spec);
+  authorizeEventSpec(payload.spec, await loadAuthorizationRegistry());
   if (sharePointPaths.length) {
     throw new Error(
       `run has ${sharePointPaths.length} SharePoint image(s), but no Microsoft Graph resolver is configured`
@@ -105,12 +108,30 @@ async function executeRun(
   }
   const assetPaths = await new AssetStore(resolve(args.values.get("asset-dir") ?? process.env.EMERALDX_ASSET_DIR ?? ".assets")).resolveSpec(payload.spec);
   const sessionContext = await loadCapturedSession(args.values.get("session") ?? "session.json");
+  const workspaceManager = !args.flags.has("local") && process.env.EMERALDX_STEEL_WORKSPACE_MODE === "containers"
+    ? new FileSteelWorkspaceManager(
+        resolve(process.env.EMERALDX_WORKSPACE_DIR ?? ".workspaces"),
+        new DockerSteelWorkspaceRuntime({ image: process.env.STEEL_WORKSPACE_IMAGE?.trim() || undefined })
+      )
+    : null;
+  let workspace: SteelWorkspace | null = null;
+  if (workspaceManager) {
+    workspace = await workspaceManager.create({
+      name: `Cvent mutation worker ${jobId}`,
+      jobId,
+      eventId: payload.spec.target!.mode === "existingEvent"
+        ? payload.spec.target!.eventId
+        : payload.spec.target!.templateEventId,
+      access: "mutation",
+    });
+  }
   const browserProvider: BrowserProvider = args.flags.has("local")
     ? new LocalPlaywrightProvider({ headless: !args.flags.has("headed"), sessionContext })
     : new SteelProvider({
         apiKey: requiredEnv("STEEL_API_KEY"),
-        baseUrl: process.env.STEEL_BASE_URL?.trim() || undefined,
+        baseUrl: (workspace?.apiUrl ?? process.env.STEEL_BASE_URL?.trim()) || undefined,
         sessionContext,
+        interactive: Boolean(workspace),
       });
   const api = new CventApi({
     clientId: requiredEnv("CVENT_CLIENT_ID"),
@@ -122,28 +143,40 @@ async function executeRun(
   });
   process.env.EMERALDX_OPERATOR = payload.operator.email;
 
-  const result = await runEvent({
-    spec: payload.spec,
-    operator: payload.operator,
-    store,
-    api,
-    browserProvider,
-    denyList: {
-      selectors: csvEnv("EMERALDX_DENY_SELECTORS"),
-      urlPatterns: csvEnv("EMERALDX_DENY_URL_PATTERNS"),
-    },
-    assetPaths,
-    executionControl: { waitUntilRunnable: () => controls.waitUntilRunnable(jobId) },
-    onBrowserConnected: (details) => controls.setBrowser(jobId, details).then(() => {}),
-    costCeilingUsd: numberEnv("EMERALDX_COST_CEILING_USD", 30),
-    costAlertUsd: numberEnv("EMERALDX_COST_ALERT_USD", 20),
-  });
-  return {
-    runId: result.runId,
-    eventId: result.eventId,
-    status: result.status,
-    triageSummary: result.triageSummary,
-  };
+  try {
+    if (workspaceManager && workspace) await workspaceManager.recordActivity(workspace.id, { type: "plan_started", message: "Agent started the authorized event plan" });
+    const result = await runEvent({
+      spec: payload.spec,
+      operator: payload.operator,
+      store,
+      api,
+      browserProvider,
+      denyList: {
+        selectors: csvEnv("EMERALDX_DENY_SELECTORS"),
+        urlPatterns: csvEnv("EMERALDX_DENY_URL_PATTERNS"),
+      },
+      assetPaths,
+      executionControl: { waitUntilRunnable: () => controls.waitUntilRunnable(jobId) },
+      onBrowserConnected: (details) => Promise.all([
+        controls.setBrowser(jobId, details),
+        workspaceManager && workspace ? workspaceManager.recordActivity(workspace.id, { type: "browser_connected", message: "Steel browser connected" }) : Promise.resolve(),
+      ]).then(() => {}),
+      costCeilingUsd: numberEnv("EMERALDX_COST_CEILING_USD", 30),
+      costAlertUsd: numberEnv("EMERALDX_COST_ALERT_USD", 20),
+    });
+    if (workspaceManager && workspace) await workspaceManager.recordActivity(workspace.id, { type: "run_finished", message: `Agent finished with status ${result.status}` });
+    return {
+      runId: result.runId,
+      eventId: result.eventId,
+      status: result.status,
+      triageSummary: result.triageSummary,
+    };
+  } catch (error) {
+    if (workspaceManager && workspace) await workspaceManager.recordActivity(workspace.id, { type: "run_failed", message: error instanceof Error ? error.message : "Agent run failed" }).catch(() => undefined);
+    throw error;
+  } finally {
+    if (workspaceManager && workspace) await workspaceManager.release(workspace.id).catch(() => undefined);
+  }
 }
 
 function loadLocalEnvironment(): void {

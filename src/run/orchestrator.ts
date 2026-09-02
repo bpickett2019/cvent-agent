@@ -8,6 +8,7 @@ import { executionOrder, plan, type Plan, type Task } from "../planner/plan";
 import { loadProcedure, type Procedure } from "../procedures/loader";
 import { EventSpec as EventSpecSchema, type EventSpec } from "../spec/eventSpec";
 import { summarize, verify, type VerificationReport } from "../verify/verifier";
+import { assertTemplateCopyExecutionAvailable } from "./copyTemplate";
 
 export type TaskStatus = "succeeded" | "halted" | "blocked" | "skipped";
 
@@ -116,6 +117,7 @@ export function createRunOrchestrator(overrides: Partial<OrchestratorDependencie
     // Runtime validation is deliberate even though the caller is statically typed.
     // Invalid intake data must fail before a run record or Cvent side effect exists.
     const spec = EventSpecSchema.parse(args.spec);
+    assertTemplateCopyExecutionAvailable(spec);
     const eventPlan = plan(spec);
     const ordered = executionOrder(eventPlan);
     const costCeilingUsd = args.costCeilingUsd ?? 30;
@@ -403,6 +405,11 @@ export async function runEvent(args: RunEventArgs): Promise<RunResult> {
 }
 
 async function createEventShell(api: CventApi, task: Task): Promise<string> {
+  if (task.kind === "event.attach") {
+    const eventId = task.payload.eventId;
+    if (typeof eventId !== "string" || !eventId) throw new Error("event.attach task has no eventId");
+    return eventId;
+  }
   const details = recordAt(task.payload, "details");
   if (task.kind === "event.create") return (await api.createEvent(details)).id;
   if (task.kind === "event.copy") {
@@ -410,7 +417,7 @@ async function createEventShell(api: CventApi, task: Task): Promise<string> {
     if (typeof templateEventId !== "string" || !templateEventId) {
       throw new Error("event.copy task has no templateEventId");
     }
-    return (await api.copyEvent(templateEventId, details)).id;
+    throw new Error("copy contract not verified");
   }
   throw new Error(`unsupported event shell task kind "${task.kind}"`);
 }

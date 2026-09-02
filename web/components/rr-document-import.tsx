@@ -2,13 +2,19 @@
 
 import { useRef, useState } from "react";
 import type { RRNormalizedPreview } from "../lib/rr-normalize";
+import type { EventSpec } from "../../src/spec/eventSpec";
+import type { OperatorReview } from "../lib/operator-review";
+import { OperatorReviewSummary } from "./operator-review-summary";
 
 interface RRPreviewResponse {
   file: { name: string; size: number; type: "xlsx" | "csv" };
   preview: RRNormalizedPreview;
+  normalizedSpec: EventSpec;
+  compiler?: { summary: { contractFields: number; coveredContractFields: number; destinationTabs: number; assignedCells: number; reviewItems: number } };
+  operatorReview: OperatorReview;
 }
 
-export function RRDocumentImport({ onApply }: { onApply?: (preview: RRNormalizedPreview) => void }) {
+export function RRDocumentImport({ onApply }: { onApply?: (spec: EventSpec) => void }) {
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -77,12 +83,14 @@ export function RRDocumentImport({ onApply }: { onApply?: (preview: RRNormalized
           <header><div><strong>{result.file.name}</strong><small>{result.file.type.toUpperCase()} · {(result.file.size / 1024).toFixed(0)} KB</small></div><span>Preview ready</span></header>
           <div className="rr-preview-grid">
             <div><small>Event</small><strong>{result.preview.event.name ?? "Needs normalization"}</strong><span>{result.preview.event.location ?? "Location not found"}</span></div>
-            <div><small>Registration types</small><strong>{result.preview.registrationTypes.length}</strong><span>recognized mappings</span></div>
-            <div><small>Questions</small><strong>{result.preview.questions.length}</strong><span>recognized definitions</span></div>
+            <div><small>Registration types</small><strong>{result.normalizedSpec.registrationTypes.length}</strong><span>compiled EventSpec mappings</span></div>
+            <div><small>Questions</small><strong>{result.normalizedSpec.questions.length}</strong><span>compiled EventSpec definitions</span></div>
             <div><small>Allowed sheets used</small><strong>{result.preview.recognizedSheets.length}</strong><span>{result.preview.ignoredSheets.length} sheets excluded</span></div>
           </div>
+          {result.compiler && <p><b>Compiler coverage:</b> {result.compiler.summary.coveredContractFields} of {result.compiler.summary.contractFields} contract fields currently populated across {result.compiler.summary.destinationTabs} tabs ({result.compiler.summary.assignedCells} destination cells). {result.compiler.summary.reviewItems} item(s) require review.</p>}
+          <OperatorReviewSummary review={result.operatorReview} />
           <p><b>Next gate:</b> apply recognized values to the EventSpec, review every field, then queue. The raw workbook can never execute directly.</p>
-          <div className="rr-convert-actions">{onApply && <button className="primary-small rr-apply" type="button" onClick={() => onApply(result.preview)}>Apply recognized values to EventSpec</button>}<button className="secondary-button" type="button" disabled={!sourceFile || converting || result.file.type !== "xlsx"} onClick={() => void convert()}>{converting ? "Converting…" : "Download converted new RR workbook"}</button></div>
+          <div className="rr-convert-actions">{onApply && <button className="primary-small rr-apply" type="button" disabled={!result.operatorReview.canProceed} title={result.operatorReview.canProceed ? undefined : "Resolve required missing or overflow issues before applying."} onClick={() => onApply(result.normalizedSpec)}>Apply recognized values to EventSpec</button>}<button className="secondary-button" type="button" disabled={!sourceFile || converting || result.file.type !== "xlsx"} onClick={() => void convert()}>{converting ? "Converting…" : "Download converted new RR workbook"}</button></div>
         </div>
       )}
     </section>

@@ -12,6 +12,7 @@
 
 import { createHash } from "node:crypto";
 import type { EventSpec } from "../spec/eventSpec";
+import type { CopyTemplateTarget } from "../run/copyTemplate";
 
 export type Channel = "api" | "browser";
 
@@ -36,31 +37,77 @@ export interface Plan {
 
 const hash = (v: unknown) => createHash("sha256").update(JSON.stringify(v)).digest("hex").slice(0, 16);
 
+export function copyTemplateTasks(
+  target: CopyTemplateTarget,
+  details: Record<string, unknown>,
+): Task[] {
+  const exactTemplate = {
+    tenantId: target.tenantId,
+    accountId: target.accountId,
+    templateEventId: target.templateEventId,
+    templateEventName: target.templateEventName,
+  };
+  return [
+    {
+      id: "event.template.authorize", kind: "event.template.authorize", channel: "api", dependsOn: [],
+      payload: { ...exactTemplate, permission: "copy" }, label: `Authorize template ${target.templateEventName}`,
+    },
+    {
+      id: "event.shell", kind: "event.copy", channel: "api", dependsOn: ["event.template.authorize"],
+      payload: { details, ...exactTemplate }, label: `Clone template ${target.templateEventId}`,
+    },
+    {
+      id: "event.copy.verify", kind: "event.copy.verify", channel: "api", dependsOn: ["event.shell"],
+      payload: { proposedName: target.newEventName }, label: "Independently verify copied event",
+    },
+    {
+      id: "event.postCopyGrant", kind: "event.postCopyGrant", channel: "api", dependsOn: ["event.copy.verify"],
+      payload: { tenantId: target.tenantId, accountId: target.accountId, eventName: target.newEventName },
+      label: "Mint run-bound post-copy grant",
+    },
+  ];
+}
+
 export function plan(spec: EventSpec): Plan {
   const tasks: Task[] = [];
+  const copyTarget = copyTargetOf(spec);
+  const guard = copyTarget
+    ? { eventIdFrom: "event.postCopyGrant", eventName: copyTarget.newEventName }
+    : spec.target
+    ? { eventId: spec.target.eventId, eventName: spec.target.eventName }
+    : { eventName: spec.details.name };
   const push = (t: Omit<Task, "dependsOn"> & { dependsOn?: string[] }) => {
     tasks.push({ dependsOn: [], ...t });
     return t.id;
   };
 
   /* --- event shell: API. Returns the authoritative event id for guardrails. --- */
-  const shell = push({
+  let shell: string;
+  let eventReady: string;
+  if (copyTarget) {
+    for (const task of copyTemplateTasks(copyTarget, spec.details as Record<string, unknown>)) tasks.push(task);
+    shell = "event.shell";
+    eventReady = "event.postCopyGrant";
+  } else shell = eventReady = push({
     id: "event.shell",
-    kind: spec.details.templateEventId ? "event.copy" : "event.create",
+    kind: spec.target?.mode === "existingEvent" ? "event.attach" : spec.details.templateEventId ? "event.copy" : "event.create",
     channel: "api",
-    payload: { details: spec.details },
-    label: spec.details.templateEventId
+    payload: spec.target?.mode === "existingEvent" ? { eventId: spec.target.eventId, eventName: spec.target.eventName } : { details: spec.details },
+    label: spec.target?.mode === "existingEvent"
+      ? `Use existing event ${spec.target.eventName}`
+      : spec.details.templateEventId
       ? `Clone template ${spec.details.templateEventId}`
       : `Create event "${spec.details.name}"`,
   });
 
   const details = push({
     id: "event.details",
-    kind: "event.update",
-    channel: "api",
-    dependsOn: [shell],
-    payload: { details: spec.details },
-    label: "Apply event details",
+    kind: "event.details.reconcile",
+    channel: "browser",
+    dependsOn: [eventReady],
+    procedure: "events/reconcile-event-details",
+    payload: { guard, details: spec.details },
+    label: "Reconcile event details",
   });
 
   /* --------------------------- website: browser only ------------------------ */
@@ -149,56 +196,48 @@ export function plan(spec: EventSpec): Plan {
       registrationType.key,
       push({
         id: `reg.type.${registrationType.key}`,
-        kind: "reg.registrationType.create",
+        kind: "reg.registrationType.reconcile",
         channel: "browser",
         dependsOn: [details],
-        procedure: "registration/create-registration-type",
-        payload: { registrationType },
+        procedure: "registration/reconcile-registration-type",
+        payload: { guard, registrationType },
         label: `Registration type "${registrationType.name}"`,
       }),
     ])
   );
 
-  // Stable order plus explicit dependencies makes conditional chains safe even
-  // when the input array itself is not sorted by question order.
+  // A question and all of its visibility dimensions are one Site Designer
+  // reconcile transaction: read once, write the complete payload, save once,
+  // then reload/read back. Splitting visibility into another task would create a
+  // second save and expose a partially configured question between tasks.
   const questions = [...spec.questions].sort((a, b) => a.order - b.order || a.key.localeCompare(b.key));
   for (const question of questions) {
     const conditionalDependencies =
       question.visibility.type === "questionAnswer"
-        ? [`reg.question.${question.visibility.questionKey}.visibility`]
+        ? [`reg.question.${question.visibility.questionKey}`]
         : question.visibility.type === "registrationTypes"
           ? question.visibility.registrationTypeKeys.map((key) => registrationTypeTasks.get(key)!)
           : [];
     const { visibility, ...definition } = question;
-    const create = push({
+    push({
       id: `reg.question.${question.key}`,
-      kind: "reg.question.create",
+      kind: "reg.question.reconcile",
       channel: "browser",
       dependsOn: [details, ...conditionalDependencies],
-      procedure: "registration/create-question",
-      payload: { question: definition },
-      label: `Registration question "${question.text}"`,
-    });
-
-    push({
-      id: `reg.question.${question.key}.visibility`,
-      kind: "reg.question.visibility",
-      channel: "browser",
-      dependsOn: [create],
-      procedure: "registration/set-question-visibility",
-      payload: { questionKey: question.key, visibility },
-      label: `Set visibility for question "${question.text}"`,
+      procedure: "registration/reconcile-question",
+      payload: { guard, question: definition, visibility },
+      label: `Reconcile registration question "${question.text}"`,
     });
   }
 
   const admissionTasks = reg.admissionItems.map((item) =>
     push({
       id: `reg.admission.${item.key}`,
-      kind: "reg.admission.create",
+      kind: "reg.admission.reconcile",
       channel: "browser",
       dependsOn: [details],
-      procedure: "registration/create-admission-item",
-      payload: { item },
+      procedure: "registration/reconcile-admission-item",
+      payload: { guard, item },
       label: `Admission item "${item.name}"`,
     })
   );
@@ -206,15 +245,71 @@ export function plan(spec: EventSpec): Plan {
   const pathTasks = reg.paths.map((p) =>
     push({
       id: `reg.path.${p.key}`,
-      kind: "reg.path.create",
+      kind: "reg.path.reconcile",
       channel: "browser",
       // A path binds admission items, so those must exist first.
       dependsOn: p.admissionItemKeys.map((k) => `reg.admission.${k}`),
-      procedure: "registration/create-path",
-      payload: { path: p },
+      procedure: "registration/reconcile-path",
+      payload: { guard, path: p },
       label: `Registration path "${p.name}"`,
     })
   );
+
+  // Pricing is a separate Cvent surface from admission-item identity.
+  const pricingTasks = new Map(
+    reg.admissionItems.map((item) => [
+      item.key,
+      push({
+        id: `reg.pricing.${item.key}`,
+        kind: "reg.pricing.reconcile",
+        channel: "browser",
+        dependsOn: [`reg.admission.${item.key}`],
+        procedure: "registration/reconcile-pricing",
+        payload: {
+          guard,
+          itemKey: item.key,
+          itemName: item.name,
+          pricing: {
+            basePrice: item.price,
+            currency: item.currency,
+            chargeFee: item.chargeFee,
+            tiers: item.pricing,
+          },
+        },
+        label: `Pricing for admission item "${item.name}"`,
+      }),
+    ])
+  );
+
+  // Consume anticipated compiler output conservatively without widening
+  // EventSpec: only an array of object records with an explicit key/code emits.
+  const anticipatedDiscounts = (reg as unknown as { discounts?: unknown }).discounts;
+  if (Array.isArray(anticipatedDiscounts)) {
+    for (const candidate of anticipatedDiscounts) {
+      if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) continue;
+      const discount = candidate as Record<string, unknown>;
+      const identity =
+        typeof discount.key === "string" ? discount.key : typeof discount.code === "string" ? discount.code : undefined;
+      if (!identity) continue;
+      const rawTargets = Array.isArray(discount.admissionItemKeys)
+        ? discount.admissionItemKeys
+        : Array.isArray(discount.admissionItemCodes)
+          ? discount.admissionItemCodes
+          : [];
+      const targets = rawTargets.filter((value): value is string => typeof value === "string");
+      push({
+        id: `reg.discount.${identity}`,
+        kind: "reg.discount.reconcile",
+        channel: "browser",
+        dependsOn: targets.length
+          ? targets.map((key) => pricingTasks.get(key) ?? `reg.pricing.${key}`)
+          : [...pricingTasks.values()],
+        procedure: "registration/reconcile-discount",
+        payload: { guard, discount },
+        label: `Discount "${String(discount.code ?? identity)}"`,
+      });
+    }
+  }
 
   reg.optionalItems.forEach((o) =>
     push({
@@ -231,11 +326,11 @@ export function plan(spec: EventSpec): Plan {
   reg.vouchers.forEach((v) =>
     push({
       id: `reg.voucher.${v.key}`,
-      kind: "reg.voucher.create",
+      kind: "reg.voucher.reconcile",
       channel: "browser",
       dependsOn: v.appliesTo.length ? v.appliesTo.map((k) => `reg.admission.${k}`) : admissionTasks,
-      procedure: "registration/create-voucher",
-      payload: { voucher: v },
+      procedure: "registration/reconcile-voucher",
+      payload: { guard, voucher: v },
       label: `Voucher "${v.code}"`,
     })
   );
@@ -316,4 +411,9 @@ export function executionOrder(p: Plan): Task[] {
 
 function assertAcyclic(tasks: Task[]) {
   executionOrder({ specHash: "", tasks });
+}
+
+function copyTargetOf(spec: EventSpec): CopyTemplateTarget | undefined {
+  const target = (spec as unknown as { target?: Partial<CopyTemplateTarget> }).target;
+  return target?.mode === "copyTemplate" ? target as CopyTemplateTarget : undefined;
 }

@@ -1,26 +1,32 @@
 id: site/configure-footer
-version: 1
-goal: >
-  Configure the website footer text, social links, and contact email exactly as
-  supplied in the event specification.
+version: 2
+goal: Reconcile requested footer content on the exact mapped Header and Footer surface with one save and literal read-back.
 preconditions:
-  - Event exists and is bound to the run's event id
-  - The event website designer is available
+  - Event URL evtstub equals the run event id, exact event name is visible, and title is Site Designer
+  - Top-level Save is disabled at task start
 steps:
-  - description: Open the website footer editor
-    selectorHint: "TODO"
-  - description: Apply the exact footer configuration {{footer}}
-    selectorHint: "TODO"
-  - description: Save the footer and confirm the configured values remain visible
-    selectorHint: "TODO"
+  - description: Open the mapped template surface and inventory every footer component, label, literal destination, visibility, and model before writing
+    selectorHint: '[data-cvent-id="template:0a4c67cb-cd3f-4f55-8b73-2915bc0b9558"]'
+    verify: '[data-cvent-id="nucleus-site-editor-site-header"] contains exact Default Header and Footer and HEADER AND FOOTER'
+    onMiss: Halt on Summary, Registration Summary, WEBSITE PAGE, another template, or an ambiguous surface.
+  - description: Reconcile only exact existing footer components to {{footer}} while preserving all unrequested components, layout, order, assets, and styling
+    selectorHint: '[data-cvent-id="section-sectionRow:ae7485dd-de28-4945-aafd-440b4ee8de36"]'
+    value: '{{footer}}'
+    onMiss: Halt if model, inspector, literal destination, visibility, or scope is unproven; never infer a link from rendered text or rewrite a supplied URL.
+  - description: Reassert the exact surface and save the complete footer reconciliation exactly once
+    selectorHint: '[data-cvent-id="site-designer-save-button"]'
+    verify: 'Default Header and Footer / HEADER AND FOOTER remains selected and Save returns to disabled'
+  - description: Reload the same event-scoped route, reopen the surface, inventory untouched labels, and independently read back exact target inspectors
+    selectorHint: '[data-cvent-id="nucleus-site-editor-site-header"]'
+    verify: 'Component model, label, literal destination, visibility, surface, and supported footer fields equal {{footer}}'
 idempotency:
-  check: "The saved footer text, social links, and contact email exactly equal {{footer}}"
+  check: 'Exact surface plus component identity, literal destinations, visibility, and values already equal {{footer}}; if equal, do not save.'
 failureModes:
-  - symptom: "Cvent rejects a supplied social or contact link"
-    action: "Halt and report the rejected field and value; do not rewrite it."
-  - symptom: "The footer changes do not persist after saving"
-    action: "Retry the save once, then halt with the values that did not persist."
+  - symptom: Event, clean-state, exact-surface, component identity, account scope, or inspector guard fails
+    action: Halt without changing state or placing a duplicate.
+  - symptom: Rendered and inspector values disagree after reload
+    action: Report FAIL with before, intended, and after values; do not retry Save.
 provenance:
-  authoredBy: human
-  validatedAgainst: null
-  lastReviewed: null
+  authoredBy: agent-proposed
+  validatedAgainst: retained-agent-1-and-agent-6-footer-map
+  lastReviewed: '2026-09-01'

@@ -36,6 +36,7 @@ export function ReviewPage({ runs }: { runs: DashboardRun[] }) {
           {reviewable.map((candidate) => <option value={candidate.id} key={candidate.id}>{candidate.eventName} · {candidate.id}</option>)}
         </select>
       </header>
+      <div className="notice error-summary" role="status"><strong>Demo data</strong><span>These review records are interface fixtures, not live Cvent execution results.</span></div>
 
       <div className="review-hero">
         <div className="review-event-mark"><span>{initials(run.eventName)}</span></div>

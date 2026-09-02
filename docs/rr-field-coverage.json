@@ -1,0 +1,4229 @@
+{
+  "schemaVersion": "1.0",
+  "title": "Definitive 107-Field RR Coverage Matrix",
+  "contract": {
+    "fieldCount": 107,
+    "template": "web/templates/Emerald_Cvent_Intake_Form.xlsx",
+    "templateSheet": "Cvent Field Map",
+    "templateRows": "5-111",
+    "templateSha256": "784f113c44b635c0f43024a1e86baba7d0b36b5d90b081ebcd2d40165cc83b9a",
+    "legacyEvidenceWorkbook": "/Users/bailey/Downloads/BDNY 2026 (BDE261) FINAL RR Doc_NEW_2.26.26.xlsx",
+    "legacyEvidenceSha256": "da7ea1d56616357080ba4a69eea74aa11266478bc13c3581cd6b3fdd7cd1bb51",
+    "definition": "One field per authoritative Field Map row; covered requires source, parser, EventSpec, procedure, and read-back."
+  },
+  "summary": {
+    "byStatus": {
+      "covered": 75,
+      "partial": 11,
+      "carryover": 4,
+      "gap": 0,
+      "unsupported": 17
+    },
+    "coveredEndToEnd": 75,
+    "notCoveredEndToEnd": 32
+  },
+  "statusDefinitions": {
+    "covered": "Implemented end-to-end.",
+    "partial": "Lossy or review-gated.",
+    "carryover": "Inherited intentionally.",
+    "gap": "Missing input source.",
+    "unsupported": "No complete implementation chain."
+  },
+  "fields": [
+    {
+      "id": "RR-001",
+      "template": {
+        "row": 5,
+        "cventNav": "Event",
+        "cventAreaOrWidget": "Event > Details / Website title / Event Details",
+        "cventFieldName": "Event Name",
+        "question": "Existing event name (template the agent copies)",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Event Details > Existing Event Name",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details > Existing Event Name",
+        "Event Details",
+        "Existing Event Name"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "details.templateEventId",
+      "cventDestination": {
+        "nav": "Event",
+        "areaOrWidget": "Event > Details / Website title / Event Details",
+        "field": "Event Name"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "partial",
+        "confidence": "review",
+        "templateStatus": "Confirmed",
+        "rationale": "Represented but lossy or requires review."
+      }
+    },
+    {
+      "id": "RR-002",
+      "template": {
+        "row": 6,
+        "cventNav": "Event",
+        "cventAreaOrWidget": "Event > Details / Website title / Event Details",
+        "cventFieldName": "Event Name",
+        "question": "New event name",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Event Details > New Event Name",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details > New Event Name",
+        "Event Details",
+        "New Event Name"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "details.name",
+      "cventDestination": {
+        "nav": "Event",
+        "areaOrWidget": "Event > Details / Website title / Event Details",
+        "field": "Event Name"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-003",
+      "template": {
+        "row": 7,
+        "cventNav": "Event",
+        "cventAreaOrWidget": "Event > Details / Header + confirmations",
+        "cventFieldName": "Display / Short Name",
+        "question": "Display / short name",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "-- no RR field --",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "-- no RR field --"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "details.name",
+      "cventDestination": {
+        "nav": "Event",
+        "areaOrWidget": "Event > Details / Header + confirmations",
+        "field": "Display / Short Name"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-004",
+      "template": {
+        "row": 8,
+        "cventNav": "Event",
+        "cventAreaOrWidget": "Event > Details / Event Details widget",
+        "cventFieldName": "Venue Name",
+        "question": "Venue name",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Event Details > Event Location (combined)",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details > Event Location (combined)",
+        "Event Details",
+        "Event Location (combined)"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "details.venue.name",
+      "cventDestination": {
+        "nav": "Event",
+        "areaOrWidget": "Event > Details / Event Details widget",
+        "field": "Venue Name"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-005",
+      "template": {
+        "row": 9,
+        "cventNav": "Event",
+        "cventAreaOrWidget": "Event > Details / Event Details widget",
+        "cventFieldName": "City",
+        "question": "City",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Event Details > Event Location (combined)",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details > Event Location (combined)",
+        "Event Details",
+        "Event Location (combined)"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "details.venue.city",
+      "cventDestination": {
+        "nav": "Event",
+        "areaOrWidget": "Event > Details / Event Details widget",
+        "field": "City"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-006",
+      "template": {
+        "row": 10,
+        "cventNav": "Event",
+        "cventAreaOrWidget": "Event > Details / Event Details widget",
+        "cventFieldName": "State",
+        "question": "State",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Event Details > Event Location (combined)",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details > Event Location (combined)",
+        "Event Details",
+        "Event Location (combined)"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "details.venue.state",
+      "cventDestination": {
+        "nav": "Event",
+        "areaOrWidget": "Event > Details / Event Details widget",
+        "field": "State"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-007",
+      "template": {
+        "row": 11,
+        "cventNav": "Event",
+        "cventAreaOrWidget": "Event > Details / Event settings",
+        "cventFieldName": "Time Zone",
+        "question": "Time zone",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Event Details > Time Zone for Event Location",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details > Time Zone for Event Location",
+        "Event Details",
+        "Time Zone for Event Location"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "details.timezone",
+      "cventDestination": {
+        "nav": "Event",
+        "areaOrWidget": "Event > Details / Event settings",
+        "field": "Time Zone"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-008",
+      "template": {
+        "row": 12,
+        "cventNav": "Event",
+        "cventAreaOrWidget": "Event > Details / Event settings",
+        "cventFieldName": "Event Type",
+        "question": "Event type",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Event Details > Type of Event",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details > Type of Event",
+        "Event Details",
+        "Type of Event"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "details.format",
+      "cventDestination": {
+        "nav": "Event",
+        "areaOrWidget": "Event > Details / Event settings",
+        "field": "Event Type"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-009",
+      "template": {
+        "row": 13,
+        "cventNav": "Event",
+        "cventAreaOrWidget": "Event > Details / Event Details widget",
+        "cventFieldName": "Expo Hall Dates",
+        "question": "Expo hall dates - START",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Event Details > Expo Hall Dates",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details > Expo Hall Dates",
+        "Event Details",
+        "Expo Hall Dates"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "details.start",
+      "cventDestination": {
+        "nav": "Event",
+        "areaOrWidget": "Event > Details / Event Details widget",
+        "field": "Expo Hall Dates"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-010",
+      "template": {
+        "row": 14,
+        "cventNav": "Event",
+        "cventAreaOrWidget": "Event > Details / Event Details widget",
+        "cventFieldName": "Expo Hall Dates",
+        "question": "Expo hall dates - END",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Event Details > Expo Hall Dates",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details > Expo Hall Dates",
+        "Event Details",
+        "Expo Hall Dates"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "details.end",
+      "cventDestination": {
+        "nav": "Event",
+        "areaOrWidget": "Event > Details / Event Details widget",
+        "field": "Expo Hall Dates"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-011",
+      "template": {
+        "row": 15,
+        "cventNav": "Event",
+        "cventAreaOrWidget": "Event > Details / Event Details widget",
+        "cventFieldName": "Conference Dates",
+        "question": "Conference dates - START",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Event Details > Conference Dates",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details > Conference Dates",
+        "Event Details",
+        "Conference Dates"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "details.start",
+      "cventDestination": {
+        "nav": "Event",
+        "areaOrWidget": "Event > Details / Event Details widget",
+        "field": "Conference Dates"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-012",
+      "template": {
+        "row": 16,
+        "cventNav": "Event",
+        "cventAreaOrWidget": "Event > Details / Event Details widget",
+        "cventFieldName": "Conference Dates",
+        "question": "Conference dates - END",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Event Details > Conference Dates",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details > Conference Dates",
+        "Event Details",
+        "Conference Dates"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "details.end",
+      "cventDestination": {
+        "nav": "Event",
+        "areaOrWidget": "Event > Details / Event Details widget",
+        "field": "Conference Dates"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-013",
+      "template": {
+        "row": 17,
+        "cventNav": "Event",
+        "cventAreaOrWidget": "Event > Details / Event Details widget",
+        "cventFieldName": "Show Hours",
+        "question": "Show hours",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Event Details > Show Hours",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details > Show Hours",
+        "Event Details",
+        "Show Hours"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Event",
+        "areaOrWidget": "Event > Details / Event Details widget",
+        "field": "Show Hours"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "unsupported",
+        "confidence": "none",
+        "templateStatus": "Confirmed",
+        "rationale": "No complete EventSpec/compiler/procedure chain."
+      }
+    },
+    {
+      "id": "RR-014",
+      "template": {
+        "row": 18,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Overview / Registration Settings",
+        "cventFieldName": "Registration Deadline / Close",
+        "question": "Registration deadline / close",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Reg Types & Pricing > Onsite tier end date",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Reg Types & Pricing > Onsite tier end date",
+        "Reg Types & Pricing",
+        "Onsite tier end date"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Overview / Registration Settings",
+        "field": "Registration Deadline / Close"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "unsupported",
+        "confidence": "none",
+        "templateStatus": "Confirmed",
+        "rationale": "No complete EventSpec/compiler/procedure chain."
+      }
+    },
+    {
+      "id": "RR-015",
+      "template": {
+        "row": 19,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Overview / Registration Settings",
+        "cventFieldName": "Registration Goal",
+        "question": "Registration goal (est. total registrations)",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Event Details > Total Estimated Registration",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details > Total Estimated Registration",
+        "Event Details",
+        "Total Estimated Registration"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Overview / Registration Settings",
+        "field": "Registration Goal"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "unsupported",
+        "confidence": "none",
+        "templateStatus": "Confirmed",
+        "rationale": "No complete EventSpec/compiler/procedure chain."
+      }
+    },
+    {
+      "id": "RR-016",
+      "template": {
+        "row": 20,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Overview / Registration Settings",
+        "cventFieldName": "Registration Open Date",
+        "question": "Registration open date",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "-- not tracked in RR doc --",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "-- not tracked in RR doc --"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Overview / Registration Settings",
+        "field": "Registration Open Date"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "unsupported",
+        "confidence": "none",
+        "templateStatus": "Needs confirmation",
+        "rationale": "No complete EventSpec/compiler/procedure chain."
+      }
+    },
+    {
+      "id": "RR-017",
+      "template": {
+        "row": 21,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Cvent theme",
+        "cventFieldName": "Event Theme",
+        "question": "Event theme",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Event Details > Event Theme",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details > Event Theme",
+        "Event Details",
+        "Event Theme"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "theme.templateName",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Cvent theme",
+        "field": "Event Theme"
+      },
+      "procedure": "site/apply-theme",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "partial",
+        "confidence": "review",
+        "templateStatus": "Confirmed",
+        "rationale": "Represented but lossy or requires review."
+      }
+    },
+    {
+      "id": "RR-018",
+      "template": {
+        "row": 22,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Cvent theme",
+        "cventFieldName": "Event Theme",
+        "question": "New theme name / notes (only if not carrying over)",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Event Details > Event Theme",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details > Event Theme",
+        "Event Details",
+        "Event Theme"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "theme.templateName",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Cvent theme",
+        "field": "Event Theme"
+      },
+      "procedure": "site/apply-theme",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "partial",
+        "confidence": "review",
+        "templateStatus": "Confirmed",
+        "rationale": "Represented but lossy or requires review."
+      }
+    },
+    {
+      "id": "RR-019",
+      "template": {
+        "row": 23,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Theme",
+        "cventFieldName": "Show Progress Bar?",
+        "question": "Show progress bar?",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "-- not tracked in RR doc --",
+        "templateStatus": "Carries over"
+      },
+      "sourceAliases": [
+        "-- not tracked in RR doc --"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Theme",
+        "field": "Show Progress Bar?"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "carryover",
+        "confidence": "none",
+        "templateStatus": "Carries over",
+        "rationale": "Inherited from cloned template; no write planned."
+      }
+    },
+    {
+      "id": "RR-020",
+      "template": {
+        "row": 24,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Theme",
+        "cventFieldName": "Brand / Primary Colors",
+        "question": "Brand / primary colors",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "-- brand, not an RR tab --",
+        "templateStatus": "Carries over"
+      },
+      "sourceAliases": [
+        "-- brand, not an RR tab --"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "theme.palette.primary",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Theme",
+        "field": "Brand / Primary Colors"
+      },
+      "procedure": "site/apply-theme",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "carryover",
+        "confidence": "none",
+        "templateStatus": "Carries over",
+        "rationale": "Inherited from cloned template; no write planned."
+      }
+    },
+    {
+      "id": "RR-021",
+      "template": {
+        "row": 25,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Header widget",
+        "cventFieldName": "Header Logo",
+        "question": "Header logo (asset name or URL)",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "-- brand assets, not an RR tab --",
+        "templateStatus": "Carries over"
+      },
+      "sourceAliases": [
+        "-- brand assets, not an RR tab --"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "header.logo",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Header widget",
+        "field": "Header Logo"
+      },
+      "procedure": "site/configure-header",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "carryover",
+        "confidence": "none",
+        "templateStatus": "Carries over",
+        "rationale": "Inherited from cloned template; no write planned."
+      }
+    },
+    {
+      "id": "RR-022",
+      "template": {
+        "row": 26,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Website Navigation widget",
+        "cventFieldName": "Header Navigation Links",
+        "question": "Header navigation links (label | URL, one per line)",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Helpful & Social Links > (no header nav section)",
+        "templateStatus": "Carries over"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > (no header nav section)",
+        "Helpful & Social Links",
+        "(no header nav section)"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Website Navigation widget",
+        "field": "Header Navigation Links"
+      },
+      "procedure": "site/configure-header",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "carryover",
+        "confidence": "none",
+        "templateStatus": "Carries over",
+        "rationale": "Inherited from cloned template; no write planned."
+      }
+    },
+    {
+      "id": "RR-023",
+      "template": {
+        "row": 27,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Event Details widget",
+        "cventFieldName": "Event Title / Date / Location block",
+        "question": "Event title / date / location block",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Event Details > auto-populated",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details > auto-populated",
+        "Event Details",
+        "auto-populated"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Event Details widget",
+        "field": "Event Title / Date / Location block"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "unsupported",
+        "confidence": "none",
+        "templateStatus": "Confirmed",
+        "rationale": "No complete EventSpec/compiler/procedure chain."
+      }
+    },
+    {
+      "id": "RR-024",
+      "template": {
+        "row": 28,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Countdown Timer widget",
+        "cventFieldName": "Countdown Timer",
+        "question": "Countdown clock?",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Helpful & Social Links > Do you want a countdown clock?",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > Do you want a countdown clock?",
+        "Helpful & Social Links",
+        "Do you want a countdown clock?"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Countdown Timer widget",
+        "field": "Countdown Timer"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "unsupported",
+        "confidence": "none",
+        "templateStatus": "Confirmed",
+        "rationale": "No complete EventSpec/compiler/procedure chain."
+      }
+    },
+    {
+      "id": "RR-025",
+      "template": {
+        "row": 29,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Countdown Timer widget",
+        "cventFieldName": "Countdown Timer",
+        "question": "Text above the countdown clock",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Helpful & Social Links > If yes, what text above the clock?",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > If yes, what text above the clock?",
+        "Helpful & Social Links",
+        "If yes, what text above the clock?"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Countdown Timer widget",
+        "field": "Countdown Timer"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "unsupported",
+        "confidence": "none",
+        "templateStatus": "Confirmed",
+        "rationale": "No complete EventSpec/compiler/procedure chain."
+      }
+    },
+    {
+      "id": "RR-026",
+      "template": {
+        "row": 30,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Social Media Feed / Share-Follow",
+        "cventFieldName": "Social Feed / Follow Bar",
+        "question": "Facebook URL",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Helpful & Social Links > Social Media URLs",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > Social Media URLs",
+        "Helpful & Social Links",
+        "Social Media URLs"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "footer.socialLinks.facebook",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Social Media Feed / Share-Follow",
+        "field": "Social Feed / Follow Bar"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-027",
+      "template": {
+        "row": 31,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Social Media Feed / Share-Follow",
+        "cventFieldName": "Social Feed / Follow Bar",
+        "question": "X URL",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Helpful & Social Links > Social Media URLs",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > Social Media URLs",
+        "Helpful & Social Links",
+        "Social Media URLs"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "footer.socialLinks.x",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Social Media Feed / Share-Follow",
+        "field": "Social Feed / Follow Bar"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-028",
+      "template": {
+        "row": 32,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Social Media Feed / Share-Follow",
+        "cventFieldName": "Social Feed / Follow Bar",
+        "question": "LinkedIn URL",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Helpful & Social Links > Social Media URLs",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > Social Media URLs",
+        "Helpful & Social Links",
+        "Social Media URLs"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "footer.socialLinks.linkedin",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Social Media Feed / Share-Follow",
+        "field": "Social Feed / Follow Bar"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-029",
+      "template": {
+        "row": 33,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Social Media Feed / Share-Follow",
+        "cventFieldName": "Social Feed / Follow Bar",
+        "question": "YouTube URL",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Helpful & Social Links > Social Media URLs",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > Social Media URLs",
+        "Helpful & Social Links",
+        "Social Media URLs"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Social Media Feed / Share-Follow",
+        "field": "Social Feed / Follow Bar"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "unsupported",
+        "confidence": "none",
+        "templateStatus": "Confirmed",
+        "rationale": "No complete EventSpec/compiler/procedure chain."
+      }
+    },
+    {
+      "id": "RR-030",
+      "template": {
+        "row": 34,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Social Media Feed / Share-Follow",
+        "cventFieldName": "Social Feed / Follow Bar",
+        "question": "Instagram URL",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Helpful & Social Links > Social Media URLs",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > Social Media URLs",
+        "Helpful & Social Links",
+        "Social Media URLs"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "footer.socialLinks.instagram",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Social Media Feed / Share-Follow",
+        "field": "Social Feed / Follow Bar"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-031",
+      "template": {
+        "row": 35,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Already Registered widget",
+        "cventFieldName": "Already Registered link",
+        "question": "Already Registered link on landing page",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Event Details > Already Registered Link on Landing Page",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details > Already Registered Link on Landing Page",
+        "Event Details",
+        "Already Registered Link on Landing Page"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Already Registered widget",
+        "field": "Already Registered link"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "unsupported",
+        "confidence": "none",
+        "templateStatus": "Confirmed",
+        "rationale": "No complete EventSpec/compiler/procedure chain."
+      }
+    },
+    {
+      "id": "RR-032",
+      "template": {
+        "row": 36,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Text page element",
+        "cventFieldName": "Text block(s)",
+        "question": "Custom text block(s)",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "-- content, not an RR tab --",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "-- content, not an RR tab --"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "pages[].widgets[text]",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Text page element",
+        "field": "Text block(s)"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "partial",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Represented but lossy or requires review."
+      }
+    },
+    {
+      "id": "RR-033",
+      "template": {
+        "row": 37,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Image / Slideshow element",
+        "cventFieldName": "Image / Slideshow",
+        "question": "Image / slideshow (asset names or URLs)",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "-- brand assets, not an RR tab --",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "-- brand assets, not an RR tab --"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "pages[].widgets[image]",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Image / Slideshow element",
+        "field": "Image / Slideshow"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "partial",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Represented but lossy or requires review."
+      }
+    },
+    {
+      "id": "RR-034",
+      "template": {
+        "row": 38,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Video page element",
+        "cventFieldName": "Video",
+        "question": "Video URL",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "-- content, not an RR tab --",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "-- content, not an RR tab --"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "pages[].widgets[video]",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Video page element",
+        "field": "Video"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "partial",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Represented but lossy or requires review."
+      }
+    },
+    {
+      "id": "RR-035",
+      "template": {
+        "row": 39,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer > T&C) / Terms & Conditions widget",
+        "cventFieldName": "Show Policy / T&C link URL",
+        "question": "Show Policy / T&C link URL",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Policies & Rules > needs a new column",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Policies & Rules > needs a new column",
+        "Policies & Rules",
+        "needs a new column"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer > T&C) / Terms & Conditions widget",
+        "field": "Show Policy / T&C link URL"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "unsupported",
+        "confidence": "none",
+        "templateStatus": "Confirmed",
+        "rationale": "No complete EventSpec/compiler/procedure chain."
+      }
+    },
+    {
+      "id": "RR-036",
+      "template": {
+        "row": 40,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer > T&C) / Terms & Conditions widget",
+        "cventFieldName": "Cancellation & Refund text",
+        "question": "Cancellation & refund text",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Policies & Rules > needs a new column",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Policies & Rules > needs a new column",
+        "Policies & Rules",
+        "needs a new column"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer > T&C) / Terms & Conditions widget",
+        "field": "Cancellation & Refund text"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "unsupported",
+        "confidence": "none",
+        "templateStatus": "Confirmed",
+        "rationale": "No complete EventSpec/compiler/procedure chain."
+      }
+    },
+    {
+      "id": "RR-037",
+      "template": {
+        "row": 41,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer > Questions) / Consent question",
+        "cventFieldName": "Privacy policy acceptance",
+        "question": "Privacy policy acceptance question text",
+        "tab": "1. Event Setup",
+        "sourceInRRDoc": "Show Questions > Demo Name = POLICY / EMPP",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Show Questions > Demo Name = POLICY / EMPP",
+        "Show Questions",
+        "Demo Name = POLICY",
+        "EMPP"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileEventDetails / previewRRDocument",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer > Questions) / Consent question",
+        "field": "Privacy policy acceptance"
+      },
+      "procedure": "events/reconcile-event-details",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "unsupported",
+        "confidence": "none",
+        "templateStatus": "Confirmed",
+        "rationale": "No complete EventSpec/compiler/procedure chain."
+      }
+    },
+    {
+      "id": "RR-038",
+      "template": {
+        "row": 42,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "cventFieldName": "Show Hours link",
+        "question": "Show Hours",
+        "tab": "2. Footer Links",
+        "sourceInRRDoc": "Helpful & Social Links > Footer Options",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > Footer Options",
+        "Helpful & Social Links",
+        "Footer Options"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileFooterLinks",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "footer.links[]",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "field": "Show Hours link"
+      },
+      "procedure": "site/configure-footer",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-039",
+      "template": {
+        "row": 43,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "cventFieldName": "Show Policy link",
+        "question": "Show Policy",
+        "tab": "2. Footer Links",
+        "sourceInRRDoc": "Helpful & Social Links > Footer Options",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > Footer Options",
+        "Helpful & Social Links",
+        "Footer Options"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileFooterLinks",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "footer.links[]",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "field": "Show Policy link"
+      },
+      "procedure": "site/configure-footer",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-040",
+      "template": {
+        "row": 44,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "cventFieldName": "Emerald Privacy Policy link",
+        "question": "Emerald Privacy Policy",
+        "tab": "2. Footer Links",
+        "sourceInRRDoc": "Helpful & Social Links > Footer Options",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > Footer Options",
+        "Helpful & Social Links",
+        "Footer Options"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileFooterLinks",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "footer.links[]",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "field": "Emerald Privacy Policy link"
+      },
+      "procedure": "site/configure-footer",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-041",
+      "template": {
+        "row": 45,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "cventFieldName": "Browse Sessions link",
+        "question": "Browse Sessions",
+        "tab": "2. Footer Links",
+        "sourceInRRDoc": "Helpful & Social Links > Footer Options",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > Footer Options",
+        "Helpful & Social Links",
+        "Footer Options"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileFooterLinks",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "footer.links[]",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "field": "Browse Sessions link"
+      },
+      "procedure": "site/configure-footer",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-042",
+      "template": {
+        "row": 46,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "cventFieldName": "Review Pricing link",
+        "question": "Review Pricing",
+        "tab": "2. Footer Links",
+        "sourceInRRDoc": "Helpful & Social Links > Footer Options",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > Footer Options",
+        "Helpful & Social Links",
+        "Footer Options"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileFooterLinks",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "footer.links[]",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "field": "Review Pricing link"
+      },
+      "procedure": "site/configure-footer",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-043",
+      "template": {
+        "row": 47,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "cventFieldName": "Registration Status link",
+        "question": "Registration Status",
+        "tab": "2. Footer Links",
+        "sourceInRRDoc": "Helpful & Social Links > Footer Options",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > Footer Options",
+        "Helpful & Social Links",
+        "Footer Options"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileFooterLinks",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "footer.links[]",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "field": "Registration Status link"
+      },
+      "procedure": "site/configure-footer",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-044",
+      "template": {
+        "row": 48,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "cventFieldName": "FAQ link",
+        "question": "FAQ",
+        "tab": "2. Footer Links",
+        "sourceInRRDoc": "Helpful & Social Links > Footer Options",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > Footer Options",
+        "Helpful & Social Links",
+        "Footer Options"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileFooterLinks",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "footer.links[]",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "field": "FAQ link"
+      },
+      "procedure": "site/configure-footer",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-045",
+      "template": {
+        "row": 49,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "cventFieldName": "Contact Us button",
+        "question": "Contact Us button",
+        "tab": "2. Footer Links",
+        "sourceInRRDoc": "Helpful & Social Links > Footer Options",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > Footer Options",
+        "Helpful & Social Links",
+        "Footer Options"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileFooterLinks",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "footer.links[]",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "field": "Contact Us button"
+      },
+      "procedure": "site/configure-footer",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-046",
+      "template": {
+        "row": 50,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "cventFieldName": "Exhibitor Resource Center link",
+        "question": "Exhibitor Resource Center",
+        "tab": "2. Footer Links",
+        "sourceInRRDoc": "Helpful & Social Links > Footer Options",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > Footer Options",
+        "Helpful & Social Links",
+        "Footer Options"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileFooterLinks",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "footer.links[]",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "field": "Exhibitor Resource Center link"
+      },
+      "procedure": "site/configure-footer",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-047",
+      "template": {
+        "row": 51,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "cventFieldName": "Hotel Info link",
+        "question": "Hotel Info",
+        "tab": "2. Footer Links",
+        "sourceInRRDoc": "Helpful & Social Links > Footer Options",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "Helpful & Social Links > Footer Options",
+        "Helpful & Social Links",
+        "Footer Options"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileFooterLinks",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "footer.links[]",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Footer widget",
+        "field": "Hotel Info link"
+      },
+      "procedure": "site/configure-footer",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-048",
+      "template": {
+        "row": 52,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Overview / Registration Path",
+        "cventFieldName": "Path list",
+        "question": "Path name (exactly as named in Cvent)",
+        "tab": "3. Reg Paths",
+        "sourceInRRDoc": "Event Details / NEW REG MAPPING",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "Event Details / NEW REG MAPPING",
+        "Event Details",
+        "NEW REG MAPPING"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationPaths",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.paths[].name",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Overview / Registration Path",
+        "field": "Path list"
+      },
+      "procedure": "registration/reconcile-path",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-049",
+      "template": {
+        "row": 53,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Overview / Registration Path",
+        "cventFieldName": "Path Privacy",
+        "question": "Path privacy",
+        "tab": "3. Reg Paths",
+        "sourceInRRDoc": "Event Details / NEW REG MAPPING",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "Event Details / NEW REG MAPPING",
+        "Event Details",
+        "NEW REG MAPPING"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationPaths",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.paths[].privacy",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Overview / Registration Path",
+        "field": "Path Privacy"
+      },
+      "procedure": "registration/reconcile-path",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-050",
+      "template": {
+        "row": 54,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Overview / Registration Path",
+        "cventFieldName": "Path Status",
+        "question": "Path status",
+        "tab": "3. Reg Paths",
+        "sourceInRRDoc": "Event Details / NEW REG MAPPING",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "Event Details / NEW REG MAPPING",
+        "Event Details",
+        "NEW REG MAPPING"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationPaths",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.paths[].status",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Overview / Registration Path",
+        "field": "Path Status"
+      },
+      "procedure": "registration/reconcile-path",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-051",
+      "template": {
+        "row": 55,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Overview / Registration Path",
+        "cventFieldName": "Post-registration redirect URL",
+        "question": "Post-registration redirect URL",
+        "tab": "3. Reg Paths",
+        "sourceInRRDoc": "Event Details / NEW REG MAPPING",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Event Details / NEW REG MAPPING",
+        "Event Details",
+        "NEW REG MAPPING"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationPaths",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.paths[].redirectUrl",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Overview / Registration Path",
+        "field": "Post-registration redirect URL"
+      },
+      "procedure": "registration/reconcile-path",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-052",
+      "template": {
+        "row": 56,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Types / Registration Types",
+        "cventFieldName": "Reg Type Code (new)",
+        "question": "Reg type code (NEW)",
+        "tab": "4. Reg Types",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.registrationRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registrationTypes[].code",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Types / Registration Types",
+        "field": "Reg Type Code (new)"
+      },
+      "procedure": "registration/reconcile-registration-type",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-053",
+      "template": {
+        "row": 57,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Types / Registration Types",
+        "cventFieldName": "Registration Pass Description",
+        "question": "Registration pass description",
+        "tab": "4. Reg Types",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.registrationRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registrationTypes[].passDescription",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Types / Registration Types",
+        "field": "Registration Pass Description"
+      },
+      "procedure": "registration/reconcile-registration-type",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-054",
+      "template": {
+        "row": 58,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Types / Registration Types",
+        "cventFieldName": "Reg Type Name",
+        "question": "Reg type name",
+        "tab": "4. Reg Types",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.registrationRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registrationTypes[].name",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Types / Registration Types",
+        "field": "Reg Type Name"
+      },
+      "procedure": "registration/reconcile-registration-type",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-055",
+      "template": {
+        "row": 59,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Types / Registration Types",
+        "cventFieldName": "Reg Type Name",
+        "question": "Appears on",
+        "tab": "4. Reg Types",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.registrationRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registrationTypes[].appearsOn",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Types / Registration Types",
+        "field": "Reg Type Name"
+      },
+      "procedure": "registration/reconcile-registration-type",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-056",
+      "template": {
+        "row": 60,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Types / Registration Types",
+        "cventFieldName": "Web Page Description (what's included)",
+        "question": "Web page description - what's included",
+        "tab": "4. Reg Types",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.registrationRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registrationTypes[].description",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Types / Registration Types",
+        "field": "Web Page Description (what's included)"
+      },
+      "procedure": "registration/reconcile-registration-type",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-057",
+      "template": {
+        "row": 61,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Types / Registration Types",
+        "cventFieldName": "Admission items this type sees",
+        "question": "Admission items this type sees (codes, comma separated)",
+        "tab": "4. Reg Types",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.registrationRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registrationTypes[].code",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Types / Registration Types",
+        "field": "Admission items this type sees"
+      },
+      "procedure": "registration/reconcile-registration-type",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-058",
+      "template": {
+        "row": 62,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Types / Registration Types",
+        "cventFieldName": "Path assignment",
+        "question": "Path assignment",
+        "tab": "4. Reg Types",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.registrationRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registrationTypes[].pathKey",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Types / Registration Types",
+        "field": "Path assignment"
+      },
+      "procedure": "registration/reconcile-registration-type",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-059",
+      "template": {
+        "row": 63,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Types / Registration Types",
+        "cventFieldName": "Open for registration",
+        "question": "Open for registration",
+        "tab": "4. Reg Types",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.registrationRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registrationTypes[].openForRegistration",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Types / Registration Types",
+        "field": "Open for registration"
+      },
+      "procedure": "registration/reconcile-registration-type",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-060",
+      "template": {
+        "row": 64,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Types / Registration Types",
+        "cventFieldName": "Auto opens / closes on",
+        "question": "Auto opens on",
+        "tab": "4. Reg Types",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.registrationRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registrationTypes[].autoOpensOn",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Types / Registration Types",
+        "field": "Auto opens / closes on"
+      },
+      "procedure": "registration/reconcile-registration-type",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-061",
+      "template": {
+        "row": 65,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Types / Registration Types",
+        "cventFieldName": "Auto opens / closes on",
+        "question": "Auto closes on",
+        "tab": "4. Reg Types",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.registrationRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registrationTypes[].autoClosesOn",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Types / Registration Types",
+        "field": "Auto opens / closes on"
+      },
+      "procedure": "registration/reconcile-registration-type",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-062",
+      "template": {
+        "row": 66,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Types / Registration Types",
+        "cventFieldName": "Capacity",
+        "question": "Capacity",
+        "tab": "4. Reg Types",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.registrationRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registrationTypes[].capacity",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Types / Registration Types",
+        "field": "Capacity"
+      },
+      "procedure": "registration/reconcile-registration-type",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-063",
+      "template": {
+        "row": 67,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Types / Registration Types",
+        "cventFieldName": "Guest eligibility",
+        "question": "Can add a guest?",
+        "tab": "4. Reg Types",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.registrationRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registrationTypes[].canAddGuest",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Types / Registration Types",
+        "field": "Guest eligibility"
+      },
+      "procedure": "registration/reconcile-registration-type",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-064",
+      "template": {
+        "row": 68,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Admission Items / Admission Items",
+        "cventFieldName": "Name",
+        "question": "Name",
+        "tab": "5. Admission Items",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.admissionRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.admissionItems[].name",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Admission Items / Admission Items",
+        "field": "Name"
+      },
+      "procedure": "registration/reconcile-admission-item",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-065",
+      "template": {
+        "row": 69,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Admission Items / Admission Items",
+        "cventFieldName": "Code",
+        "question": "Code",
+        "tab": "5. Admission Items",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.admissionRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.admissionItems[].key (derived from code)",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Admission Items / Admission Items",
+        "field": "Code"
+      },
+      "procedure": "registration/reconcile-admission-item",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "partial",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Represented but lossy or requires review."
+      }
+    },
+    {
+      "id": "RR-066",
+      "template": {
+        "row": 70,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Admission Items / Admission Items",
+        "cventFieldName": "Description",
+        "question": "Description - what's included",
+        "tab": "5. Admission Items",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.admissionRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.admissionItems[].description",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Admission Items / Admission Items",
+        "field": "Description"
+      },
+      "procedure": "registration/reconcile-admission-item",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-067",
+      "template": {
+        "row": 71,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Admission Items / Admission Items",
+        "cventFieldName": "Limit which reg types can select",
+        "question": "Which reg types can select this (codes)",
+        "tab": "5. Admission Items",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.admissionRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.admissionItems[].key (derived from code)",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Admission Items / Admission Items",
+        "field": "Limit which reg types can select"
+      },
+      "procedure": "registration/reconcile-admission-item",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-068",
+      "template": {
+        "row": 72,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Admission Items / Admission Items",
+        "cventFieldName": "Open for registration",
+        "question": "Open for registration",
+        "tab": "5. Admission Items",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.admissionRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.admissionItems[].openForRegistration",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Admission Items / Admission Items",
+        "field": "Open for registration"
+      },
+      "procedure": "registration/reconcile-admission-item",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-069",
+      "template": {
+        "row": 73,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Admission Items / Admission Items",
+        "cventFieldName": "Auto opens / closes on",
+        "question": "Auto opens on",
+        "tab": "5. Admission Items",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.admissionRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.admissionItems[].autoOpensOn",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Admission Items / Admission Items",
+        "field": "Auto opens / closes on"
+      },
+      "procedure": "registration/reconcile-admission-item",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-070",
+      "template": {
+        "row": 74,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Admission Items / Admission Items",
+        "cventFieldName": "Auto opens / closes on",
+        "question": "Auto closes on",
+        "tab": "5. Admission Items",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.admissionRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.admissionItems[].autoClosesOn",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Admission Items / Admission Items",
+        "field": "Auto opens / closes on"
+      },
+      "procedure": "registration/reconcile-admission-item",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-071",
+      "template": {
+        "row": 75,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Admission Items / Admission Items",
+        "cventFieldName": "Capacity",
+        "question": "Capacity",
+        "tab": "5. Admission Items",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.admissionRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.admissionItems[].capacity",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Admission Items / Admission Items",
+        "field": "Capacity"
+      },
+      "procedure": "registration/reconcile-admission-item",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-072",
+      "template": {
+        "row": 76,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Admission Items / Admission Items",
+        "cventFieldName": "Charge a fee?",
+        "question": "Charge a fee?",
+        "tab": "5. Admission Items",
+        "sourceInRRDoc": "NEW REG MAPPING / Reg Types & Pricing",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "NEW REG MAPPING / Reg Types & Pricing",
+        "NEW REG MAPPING",
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.admissionRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.admissionItems[].chargeFee",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Admission Items / Admission Items",
+        "field": "Charge a fee?"
+      },
+      "procedure": "registration/reconcile-admission-item",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-073",
+      "template": {
+        "row": 77,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Discounts / Discounts",
+        "cventFieldName": "Name / Description",
+        "question": "Name / description",
+        "tab": "7. Discounts",
+        "sourceInRRDoc": "Discount Code Template",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Discount Code Template"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileDiscountsAndVouchers",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.discounts[].name",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Discounts / Discounts",
+        "field": "Name / Description"
+      },
+      "procedure": "registration/reconcile-discount",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-074",
+      "template": {
+        "row": 78,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Discounts / Discounts",
+        "cventFieldName": "Discount Code",
+        "question": "Discount code",
+        "tab": "7. Discounts",
+        "sourceInRRDoc": "Discount Code Template",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Discount Code Template"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileDiscountsAndVouchers",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.discounts[].code",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Discounts / Discounts",
+        "field": "Discount Code"
+      },
+      "procedure": "registration/reconcile-discount",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-075",
+      "template": {
+        "row": 79,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Discounts / Discounts",
+        "cventFieldName": "Method",
+        "question": "Method",
+        "tab": "7. Discounts",
+        "sourceInRRDoc": "Discount Code Template",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Discount Code Template"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileDiscountsAndVouchers",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.discounts[].method",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Discounts / Discounts",
+        "field": "Method"
+      },
+      "procedure": "registration/reconcile-discount",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-076",
+      "template": {
+        "row": 80,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Discounts / Discounts",
+        "cventFieldName": "Amount / Percentage",
+        "question": "Amount / percentage",
+        "tab": "7. Discounts",
+        "sourceInRRDoc": "Discount Code Template",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Discount Code Template"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileDiscountsAndVouchers",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.discounts[].amount",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Discounts / Discounts",
+        "field": "Amount / Percentage"
+      },
+      "procedure": "registration/reconcile-discount",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-077",
+      "template": {
+        "row": 81,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Discounts / Discounts",
+        "cventFieldName": "Effective From",
+        "question": "Effective from",
+        "tab": "7. Discounts",
+        "sourceInRRDoc": "Discount Code Template",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Discount Code Template"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileDiscountsAndVouchers",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.discounts[].effectiveFrom",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Discounts / Discounts",
+        "field": "Effective From"
+      },
+      "procedure": "registration/reconcile-discount",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-078",
+      "template": {
+        "row": 82,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Discounts / Discounts",
+        "cventFieldName": "Effective To",
+        "question": "Effective to",
+        "tab": "7. Discounts",
+        "sourceInRRDoc": "Discount Code Template",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Discount Code Template"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileDiscountsAndVouchers",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.discounts[].effectiveTo",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Discounts / Discounts",
+        "field": "Effective To"
+      },
+      "procedure": "registration/reconcile-discount",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-079",
+      "template": {
+        "row": 83,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Discounts / Discounts",
+        "cventFieldName": "Capacity",
+        "question": "Capacity",
+        "tab": "7. Discounts",
+        "sourceInRRDoc": "Discount Code Template",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Discount Code Template"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileDiscountsAndVouchers",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.discounts[].capacity",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Discounts / Discounts",
+        "field": "Capacity"
+      },
+      "procedure": "registration/reconcile-discount",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-080",
+      "template": {
+        "row": 84,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Discounts / Discounts",
+        "cventFieldName": "Stackable",
+        "question": "Stackable",
+        "tab": "7. Discounts",
+        "sourceInRRDoc": "Discount Code Template",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Discount Code Template"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileDiscountsAndVouchers",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.discounts[].stackable",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Discounts / Discounts",
+        "field": "Stackable"
+      },
+      "procedure": "registration/reconcile-discount",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-081",
+      "template": {
+        "row": 85,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Discounts / Discounts",
+        "cventFieldName": "Usable by",
+        "question": "Usable by",
+        "tab": "7. Discounts",
+        "sourceInRRDoc": "Discount Code Template",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Discount Code Template"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileDiscountsAndVouchers",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.discounts[].usableBy",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Discounts / Discounts",
+        "field": "Usable by"
+      },
+      "procedure": "registration/reconcile-discount",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-082",
+      "template": {
+        "row": 86,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Discounts / Discounts",
+        "cventFieldName": "Count guests toward capacity",
+        "question": "Count guests toward capacity",
+        "tab": "7. Discounts",
+        "sourceInRRDoc": "Discount Code Template",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Discount Code Template"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileDiscountsAndVouchers",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.discounts[].capacity",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Discounts / Discounts",
+        "field": "Count guests toward capacity"
+      },
+      "procedure": "registration/reconcile-discount",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-083",
+      "template": {
+        "row": 87,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Discounts / Discounts",
+        "cventFieldName": "Active",
+        "question": "Active",
+        "tab": "7. Discounts",
+        "sourceInRRDoc": "Discount Code Template",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Discount Code Template"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileDiscountsAndVouchers",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.discounts[].active",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Discounts / Discounts",
+        "field": "Active"
+      },
+      "procedure": "registration/reconcile-discount",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-084",
+      "template": {
+        "row": 88,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Discounts / Discounts",
+        "cventFieldName": "Applicable Admission Items",
+        "question": "Applicable admission items (codes)",
+        "tab": "7. Discounts",
+        "sourceInRRDoc": "Discount Code Template",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Discount Code Template"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileDiscountsAndVouchers",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.discounts[].admissionItemKeys",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Discounts / Discounts",
+        "field": "Applicable Admission Items"
+      },
+      "procedure": "registration/reconcile-discount",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-085",
+      "template": {
+        "row": 89,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Discounts / Discounts",
+        "cventFieldName": "Applicable Optional Items",
+        "question": "Applicable optional items (codes)",
+        "tab": "7. Discounts",
+        "sourceInRRDoc": "Discount Code Template",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "Discount Code Template"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileDiscountsAndVouchers",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.discounts[].optionalItemKeys",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Discounts / Discounts",
+        "field": "Applicable Optional Items"
+      },
+      "procedure": "registration/reconcile-discount",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-086",
+      "template": {
+        "row": 90,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Event Vouchers / Event Vouchers",
+        "cventFieldName": "Voucher Code",
+        "question": "Voucher code",
+        "tab": "8. Vouchers",
+        "sourceInRRDoc": "-- GAP, not in RR doc --",
+        "templateStatus": "Gap - new field"
+      },
+      "sourceAliases": [
+        "-- GAP, not in RR doc --"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileDiscountsAndVouchers",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.vouchers[].code",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Event Vouchers / Event Vouchers",
+        "field": "Voucher Code"
+      },
+      "procedure": "registration/reconcile-voucher",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Gap - new field",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-087",
+      "template": {
+        "row": 91,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Event Vouchers / Event Vouchers",
+        "cventFieldName": "Alert Email Address",
+        "question": "Alert email address",
+        "tab": "8. Vouchers",
+        "sourceInRRDoc": "-- GAP, not in RR doc --",
+        "templateStatus": "Gap - new field"
+      },
+      "sourceAliases": [
+        "-- GAP, not in RR doc --"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileDiscountsAndVouchers",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.vouchers[].alertEmail",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Event Vouchers / Event Vouchers",
+        "field": "Alert Email Address"
+      },
+      "procedure": "registration/reconcile-voucher",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Gap - new field",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-088",
+      "template": {
+        "row": 92,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Event Vouchers / Event Vouchers",
+        "cventFieldName": "Description",
+        "question": "Description",
+        "tab": "8. Vouchers",
+        "sourceInRRDoc": "-- GAP, not in RR doc --",
+        "templateStatus": "Gap - new field"
+      },
+      "sourceAliases": [
+        "-- GAP, not in RR doc --"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileDiscountsAndVouchers",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.vouchers[].description",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Event Vouchers / Event Vouchers",
+        "field": "Description"
+      },
+      "procedure": "registration/reconcile-voucher",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Gap - new field",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-089",
+      "template": {
+        "row": 93,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Event Vouchers / Event Vouchers",
+        "cventFieldName": "Capacity",
+        "question": "Capacity",
+        "tab": "8. Vouchers",
+        "sourceInRRDoc": "-- GAP, not in RR doc --",
+        "templateStatus": "Gap - new field"
+      },
+      "sourceAliases": [
+        "-- GAP, not in RR doc --"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileDiscountsAndVouchers",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.vouchers[].capacity",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Event Vouchers / Event Vouchers",
+        "field": "Capacity"
+      },
+      "procedure": "registration/reconcile-voucher",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Gap - new field",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-090",
+      "template": {
+        "row": 94,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "cventFieldName": "Question internal name",
+        "question": "Internal name (Demo Name)",
+        "tab": "9. Questions",
+        "sourceInRRDoc": "Show Questions",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "Show Questions"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileQuestionSemantics",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "questions[].key",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "field": "Question internal name"
+      },
+      "procedure": "registration/reconcile-question",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-091",
+      "template": {
+        "row": 95,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "cventFieldName": "Page displayed on",
+        "question": "Page displayed on",
+        "tab": "9. Questions",
+        "sourceInRRDoc": "Show Questions",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Show Questions"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileQuestionSemantics",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "questions[].page",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "field": "Page displayed on"
+      },
+      "procedure": "registration/reconcile-question",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "partial",
+        "confidence": "review",
+        "templateStatus": "Confirmed",
+        "rationale": "Represented but lossy or requires review."
+      }
+    },
+    {
+      "id": "RR-092",
+      "template": {
+        "row": 96,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "cventFieldName": "Company or Individual",
+        "question": "Company or individual",
+        "tab": "9. Questions",
+        "sourceInRRDoc": "Show Questions",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Show Questions"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileQuestionSemantics",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "field": "Company or Individual"
+      },
+      "procedure": "registration/reconcile-question",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "unsupported",
+        "confidence": "none",
+        "templateStatus": "Confirmed",
+        "rationale": "No complete EventSpec/compiler/procedure chain."
+      }
+    },
+    {
+      "id": "RR-093",
+      "template": {
+        "row": 97,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "cventFieldName": "Question Text (display)",
+        "question": "Question text (as displayed on the site)",
+        "tab": "9. Questions",
+        "sourceInRRDoc": "Show Questions",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Show Questions"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileQuestionSemantics",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "questions[].text",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "field": "Question Text (display)"
+      },
+      "procedure": "registration/reconcile-question",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "partial",
+        "confidence": "review",
+        "templateStatus": "Confirmed",
+        "rationale": "Represented but lossy or requires review."
+      }
+    },
+    {
+      "id": "RR-094",
+      "template": {
+        "row": 98,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "cventFieldName": "Question Appearance",
+        "question": "Question appearance",
+        "tab": "9. Questions",
+        "sourceInRRDoc": "Show Questions",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Show Questions"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileQuestionSemantics",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "questions[].answerType",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "field": "Question Appearance"
+      },
+      "procedure": "registration/reconcile-question",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "partial",
+        "confidence": "review",
+        "templateStatus": "Confirmed",
+        "rationale": "Represented but lossy or requires review."
+      }
+    },
+    {
+      "id": "RR-095",
+      "template": {
+        "row": 99,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "cventFieldName": "Answer options (code + text)",
+        "question": "Answer options - code | text, in display order",
+        "tab": "9. Questions",
+        "sourceInRRDoc": "Show Questions",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Show Questions"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileQuestionSemantics",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "questions[].answerOptions / answerValues",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "field": "Answer options (code + text)"
+      },
+      "procedure": "registration/reconcile-question",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-096",
+      "template": {
+        "row": 100,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "cventFieldName": "Required to answer",
+        "question": "Required to answer",
+        "tab": "9. Questions",
+        "sourceInRRDoc": "Show Questions",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Show Questions"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileQuestionSemantics",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "questions[].required",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "field": "Required to answer"
+      },
+      "procedure": "registration/reconcile-question",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "partial",
+        "confidence": "review",
+        "templateStatus": "Confirmed",
+        "rationale": "Represented but lossy or requires review."
+      }
+    },
+    {
+      "id": "RR-097",
+      "template": {
+        "row": 101,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "cventFieldName": "Which reg types see this",
+        "question": "Which reg types see this (codes)",
+        "tab": "9. Questions",
+        "sourceInRRDoc": "Show Questions",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Show Questions"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileQuestionSemantics",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "questions[].visibility.registrationTypeKeys",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "field": "Which reg types see this"
+      },
+      "procedure": "registration/reconcile-question",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-098",
+      "template": {
+        "row": 102,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "cventFieldName": "Visible online",
+        "question": "Visible online",
+        "tab": "9. Questions",
+        "sourceInRRDoc": "Show Questions",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Show Questions"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileQuestionSemantics",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "field": "Visible online"
+      },
+      "procedure": "registration/reconcile-question",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "unsupported",
+        "confidence": "none",
+        "templateStatus": "Confirmed",
+        "rationale": "No complete EventSpec/compiler/procedure chain."
+      }
+    },
+    {
+      "id": "RR-099",
+      "template": {
+        "row": 103,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "cventFieldName": "Determines Reg Type?",
+        "question": "Determines reg type? (if yes, name it)",
+        "tab": "9. Questions",
+        "sourceInRRDoc": "Show Questions",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "Show Questions"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileQuestionSemantics",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "questions[].determinesRegistrationTypeKey",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "field": "Determines Reg Type?"
+      },
+      "procedure": "registration/reconcile-question",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-100",
+      "template": {
+        "row": 104,
+        "cventNav": "Registration",
+        "cventAreaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "cventFieldName": "Trigger / conditional logic",
+        "question": "Trigger / conditional logic",
+        "tab": "9. Questions",
+        "sourceInRRDoc": "Show Questions",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "Show Questions"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": true
+      },
+      "parser": {
+        "entryPoint": "compileQuestionSemantics",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "questions[].trigger",
+      "cventDestination": {
+        "nav": "Registration",
+        "areaOrWidget": "Registration Process (Site Designer) / Questions widget",
+        "field": "Trigger / conditional logic"
+      },
+      "procedure": "registration/reconcile-question",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "review",
+        "templateStatus": "Needs confirmation",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-101",
+      "template": {
+        "row": 105,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Fees / Pricing (fee schedule)",
+        "cventFieldName": "Super Saver price (Member / Non-Member)",
+        "question": "Super Saver tier - dates and Member / Non-Member price",
+        "tab": "6. Pricing",
+        "sourceInRRDoc": "Reg Types & Pricing",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.pricingRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.admissionItems[].pricing[]",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Fees / Pricing (fee schedule)",
+        "field": "Super Saver price (Member / Non-Member)"
+      },
+      "procedure": "registration/reconcile-pricing",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-102",
+      "template": {
+        "row": 106,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Fees / Pricing (fee schedule)",
+        "cventFieldName": "Early Bird price (Member / Non-Member)",
+        "question": "Early Bird tier - dates and Member / Non-Member price",
+        "tab": "6. Pricing",
+        "sourceInRRDoc": "Reg Types & Pricing",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.pricingRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.admissionItems[].pricing[]",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Fees / Pricing (fee schedule)",
+        "field": "Early Bird price (Member / Non-Member)"
+      },
+      "procedure": "registration/reconcile-pricing",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-103",
+      "template": {
+        "row": 107,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Fees / Pricing (fee schedule)",
+        "cventFieldName": "Advance price (Member / Non-Member)",
+        "question": "Advance tier - dates and Member / Non-Member price",
+        "tab": "6. Pricing",
+        "sourceInRRDoc": "Reg Types & Pricing",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.pricingRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.admissionItems[].pricing[]",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Fees / Pricing (fee schedule)",
+        "field": "Advance price (Member / Non-Member)"
+      },
+      "procedure": "registration/reconcile-pricing",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-104",
+      "template": {
+        "row": 108,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Fees / Pricing (fee schedule)",
+        "cventFieldName": "Onsite price (Member / Non-Member)",
+        "question": "Onsite tier - dates and Member / Non-Member price",
+        "tab": "6. Pricing",
+        "sourceInRRDoc": "Reg Types & Pricing",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.pricingRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "registration.admissionItems[].pricing[]",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Fees / Pricing (fee schedule)",
+        "field": "Onsite price (Member / Non-Member)"
+      },
+      "procedure": "registration/reconcile-pricing",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "covered",
+        "confidence": "exact",
+        "templateStatus": "Confirmed",
+        "rationale": "Implemented source-to-readback chain."
+      }
+    },
+    {
+      "id": "RR-105",
+      "template": {
+        "row": 109,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Fees / Create Fee",
+        "cventFieldName": "Fee Name",
+        "question": "Fee name",
+        "tab": "6. Pricing",
+        "sourceInRRDoc": "-- not tracked in RR doc --",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "-- not tracked in RR doc --"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.pricingRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Fees / Create Fee",
+        "field": "Fee Name"
+      },
+      "procedure": "registration/reconcile-pricing",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "unsupported",
+        "confidence": "none",
+        "templateStatus": "Needs confirmation",
+        "rationale": "No complete EventSpec/compiler/procedure chain."
+      }
+    },
+    {
+      "id": "RR-106",
+      "template": {
+        "row": 110,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Fees / Create Fee",
+        "cventFieldName": "Active / Display",
+        "question": "Fee active / display",
+        "tab": "6. Pricing",
+        "sourceInRRDoc": "-- not tracked in RR doc --",
+        "templateStatus": "Needs confirmation"
+      },
+      "sourceAliases": [
+        "-- not tracked in RR doc --"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.pricingRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Fees / Create Fee",
+        "field": "Active / Display"
+      },
+      "procedure": "registration/reconcile-pricing",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "unsupported",
+        "confidence": "none",
+        "templateStatus": "Needs confirmation",
+        "rationale": "No complete EventSpec/compiler/procedure chain."
+      }
+    },
+    {
+      "id": "RR-107",
+      "template": {
+        "row": 111,
+        "cventNav": "Pricing",
+        "cventAreaOrWidget": "Pricing > Fees / (display note)",
+        "cventFieldName": "Processing fee note",
+        "question": "Processing fee note",
+        "tab": "6. Pricing",
+        "sourceInRRDoc": "Reg Types & Pricing",
+        "templateStatus": "Confirmed"
+      },
+      "sourceAliases": [
+        "Reg Types & Pricing"
+      ],
+      "sourceEvidence": {
+        "legacyWorkbookSheetPresent": false
+      },
+      "parser": {
+        "entryPoint": "compileRegistrationCommerce.pricingRows",
+        "implementation": "web/lib/compiler",
+        "mode": "deterministic modern-or-legacy"
+      },
+      "eventSpecPath": "UNREPRESENTED",
+      "cventDestination": {
+        "nav": "Pricing",
+        "areaOrWidget": "Pricing > Fees / (display note)",
+        "field": "Processing fee note"
+      },
+      "procedure": "registration/reconcile-pricing",
+      "verification": "Assert exact event guard; read before write; save once only when changed; reload canonical Cvent surface and compare literally.",
+      "status": {
+        "classification": "unsupported",
+        "confidence": "none",
+        "templateStatus": "Confirmed",
+        "rationale": "No complete EventSpec/compiler/procedure chain."
+      }
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+id: registration/reconcile-question
+version: 1
+goal: Reconcile one question's semantics and visibility triggers together on its exact registration surface with one save and read-back.
+preconditions:
+  - Event URL evtstub equals the run event id, exact event name is visible, and title is Site Designer
+  - Exact registration path and startPage identity are resolved from the current event rather than copied from another path
+  - Top-level Save is disabled at task start
+steps:
+  - description: Open the exact registration page and inventory widget identities before writing
+    selectorHint: '[data-cvent-id="nucleus-site-editor-site-header"]'
+    verify: 'Visible registration path and page match {{question.page}}; page type is regProcessStep1 or the exact mapped regPage identity'
+    onMiss: Halt if the path, page ID, or surface is ambiguous.
+  - description: Find the unique existing widget by identity or place the exact mapped question kind, then read all semantics before reconciling {{question}}
+    selectorHint: '[data-cvent-id^="widget-"]'
+    value: '{{question}}'
+    verify: 'Inspector IDs include appData.question.additionalInfo.required_0 and exact question fields'
+    onMiss: Halt on duplicate text, unsupported kind, custom contact field, or ambiguous widget; do not guess by visual order.
+  - description: Reconcile agenda and specific-registrant visibility triggers together with the question payload {{visibility}}
+    selectorHint: 'button[data-cvent-id="nucleus-site-editor-menu-item-registrantSpecificVisibilityLogic"]'
+    value: '{{visibility}}'
+    verify: 'Agenda hook productAssociationVisibilityLogic and registrant criteria evaluation, operators, and literal values exactly represent {{visibility}}'
+    onMiss: Halt if a referenced item, prior question, choice value, field, operator, or criterion is unavailable; do not weaken visibility or create an account-level question tag.
+  - description: Reassert event, path, page, and widget identity and save the complete question reconciliation exactly once
+    selectorHint: '[data-cvent-id="site-designer-save-button"]'
+    verify: 'Save completes and returns to disabled on the same registration surface'
+  - description: Reload the same event-scoped route, reopen the widget, and independently read back rendered semantics and visibility triggers
+    selectorHint: '[data-cvent-id^="widget-"]'
+    verify: 'Question kind, text, required state, choices, code/note when mapped, agenda associations, registrant evaluation, criteria, and literal values equal {{question}} and {{visibility}}'
+idempotency:
+  check: 'The unique widget read back exactly equals {{question}} and {{visibility}}; if equal, perform no write and no save.'
+failureModes:
+  - symptom: Event, clean-state, path, page, widget, dependency, or inspector guard fails
+    action: Halt without changing state or creating a likely duplicate.
+  - symptom: Read back differs after reload
+    action: Report FAIL with before, intended, and after values; do not retry Save.
+provenance:
+  authoredBy: agent-proposed
+  validatedAgainst: retained-agent-5-question-map
+  lastReviewed: '2026-09-01'

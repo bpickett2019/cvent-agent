@@ -42,7 +42,11 @@ export interface SteelConfig {
   /** Operator's captured Cvent session, replayed into the hosted browser. */
   sessionContext?: CapturedBrowserContext;
   timeoutMs?: number;
+  /** Enables attended input after the run is cooperatively paused for takeover. */
+  interactive?: boolean;
 }
+
+export const STEEL_WORKER_TIMEOUT_MS = 3 * 60 * 60 * 1_000;
 
 export class SteelProvider implements BrowserProvider {
   readonly name = "steel";
@@ -58,9 +62,9 @@ export class SteelProvider implements BrowserProvider {
       method: "POST",
       headers: { "steel-api-key": this.cfg.apiKey, "content-type": "application/json" },
       body: JSON.stringify({
-        // Pause is enforced by our action gate. Viewer interaction is disabled
-        // so a human cannot bypass guardrails by clicking inside Steel.
-        debugConfig: { interactive: false, systemCursor: false },
+        // Container workspaces permit attended input only through the operator
+        // takeover flow, which pauses the cooperative action gate first.
+        debugConfig: { interactive: this.cfg.interactive ?? false, systemCursor: this.cfg.interactive ?? false },
         sessionContext: context
           ? {
               cookies: context.cookies,
@@ -71,7 +75,7 @@ export class SteelProvider implements BrowserProvider {
                 : {}),
             }
           : undefined,
-        timeout: this.cfg.timeoutMs ?? 900_000,
+        timeout: this.cfg.timeoutMs ?? STEEL_WORKER_TIMEOUT_MS,
       }),
     });
     if (!res.ok) throw new Error(`steel session create failed: ${res.status} ${await res.text()}`);

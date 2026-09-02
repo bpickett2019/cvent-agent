@@ -1,7 +1,7 @@
 /** Browser boundary checks with a fake Playwright page. No real browser or network. */
 
 import type { Browser } from "playwright";
-import { BrowserSession, type BrowserProvider } from "./src/browser/driver";
+import { BrowserSession, STEEL_WORKER_TIMEOUT_MS, type BrowserProvider } from "./src/browser/driver";
 import { GuardrailViolation, Guardrails } from "./src/guardrails/middleware";
 
 const EVENT_ID = "3f2b6a10-9c4d-4e21-b8f7-0a1c2d3e4f56";
@@ -13,6 +13,7 @@ function check(label: string, ok: boolean) {
   console.log(`${ok ? "  PASS" : "  FAIL"}  ${label}`);
   if (!ok) failures += 1;
 }
+check("Steel worker default timeout is three hours", STEEL_WORKER_TIMEOUT_MS === 10_800_000);
 
 class FakeProvider implements BrowserProvider {
   readonly name = "fake";

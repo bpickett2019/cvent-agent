@@ -1,0 +1,66 @@
+{
+  "id": "registration/reconcile-registration-type",
+  "version": 1,
+  "goal": "Deterministically reconcile one registration type configuration without overwriting conflicts.",
+  "preconditions": [
+    "The run is bound to the exact event guard {{guard}}",
+    "The event remains Draft and no destructive, publish, attendee, or communication control is used"
+  ],
+  "steps": [
+    {
+      "description": "Read the current event-scoped surface before any write",
+      "selectorHint": "GET the known event-local route; require evtstub plus exact event name from {{guard}} and marker Registration Types",
+      "verify": "The URL event id and visible event name both equal the exact event guard; stop on any mismatch",
+      "onMiss": "Stop BLOCKED; never search for or navigate to another event"
+    },
+    {
+      "description": "Resolve the requested identity from the complete read model and compare every requested field",
+      "selectorHint": "Use stable JSON/detail identity on Registration Types; desired configuration is {{registrationType}}",
+      "verify": "Exactly one identity is absent or exactly one existing record is fully comparable",
+      "onMiss": "Stop on partial data, pagination ambiguity, duplicates, account/global scope, or unsupported fields"
+    },
+    {
+      "description": "Skip an exact existing match without opening a write form",
+      "selectorHint": "Compare exact identity and full requested configuration",
+      "verify": "Report SKIPPED with the persistent Cvent identity and perform zero Saves"
+    },
+    {
+      "description": "Stop on an identity conflict",
+      "selectorHint": "Same key/code/name identity with any differing requested configuration",
+      "verify": "Report CONFLICT with field-level differences; do not overwrite, delete, or create a duplicate"
+    },
+    {
+      "description": "For an absent identity only, fill the exact requested configuration and Save once",
+      "selectorHint": "Use the mapped event-local create/edit controls, then button#Save exactly once",
+      "verify": "The exact event guard is still true immediately before Save once",
+      "onMiss": "Do not retry Save or broaden scope after validation, timeout, modal, or navigation uncertainty"
+    },
+    {
+      "description": "Perform independent read-back from the canonical list/detail surface",
+      "selectorHint": "Reload the event-scoped Registration Types read surface and resolve the persistent identity again",
+      "verify": "Read-back equals every requested field; otherwise report FAIL and do not retry the write"
+    }
+  ],
+  "idempotency": {
+    "check": "Read before write; skip exact; conflict stop; an absent identity gets Save once followed by canonical read-back"
+  },
+  "failureModes": [
+    {
+      "symptom": "Exact event guard or expected surface marker is missing",
+      "action": "Stop BLOCKED before any write."
+    },
+    {
+      "symptom": "Existing identity differs from requested configuration",
+      "action": "Stop CONFLICT and preserve existing state."
+    },
+    {
+      "symptom": "Save result or read-back is ambiguous",
+      "action": "Report FAIL; never retry Save blindly."
+    }
+  ],
+  "provenance": {
+    "authoredBy": "human",
+    "validatedAgainst": "docs/mappings/agent-1..4 read-only discovery, 2026-09-01",
+    "lastReviewed": "2026-09-01"
+  }
+}

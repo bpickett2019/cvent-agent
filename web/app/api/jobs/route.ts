@@ -6,15 +6,21 @@ import {
   type RunEventJobPayload,
 } from "../../../../src/queue/runJob";
 import { EventSpec } from "../../../../src/spec/eventSpec";
+import { authorizeEventSpec, loadAuthorizationRegistry } from "../../../../src/safety/authorizationRegistry";
+import { assertTemplateCopyExecutionAvailable } from "../../../../src/run/copyTemplate";
 import { jobQueue, publicJob, runControls } from "../../../lib/job-server";
 import { startLocalWorker } from "../../../lib/worker-launcher";
+import { assertSameOrigin } from "../../../lib/request-security";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    assertSameOrigin(request);
     const body = (await request.json()) as { spec?: unknown; operator?: unknown };
     const spec = EventSpec.parse(body.spec);
+    assertTemplateCopyExecutionAvailable(spec);
+    authorizeEventSpec(spec, await loadAuthorizationRegistry(process.env.EMERALDX_AUTHORIZATION_PATH ?? new URL("../../../../config/authorizations.json", import.meta.url).pathname));
     const operator = parseOperator(body.operator);
     const requestKey = request.headers.get("idempotency-key")?.trim() || randomUUID();
     const specHash = plan(spec).specHash;

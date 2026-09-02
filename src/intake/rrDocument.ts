@@ -34,9 +34,13 @@ const ALLOWED_SHEETS = new Set([
   "Event Details",
   "Registration Types & Pricing",
   "NEW REG MAPPING",
+  "NEW Reg Types & Pricing",
   "Sessions_Add-Ons",
   "Show Questions",
   "Discount Code Template",
+  "1. Event Setup",
+  "4. Reg Types",
+  "9. Questions",
 ]);
 
 /**
@@ -49,10 +53,10 @@ export function previewRRDocument(sheets: RRSheet[]): RRDocumentPreview {
   // A CSV has no workbook sheet name. It is allowed only as one isolated table.
   const csvSheet = sheets.length === 1 && sheets[0]?.name === "CSV" ? sheets[0] : undefined;
   const sourceSheets = csvSheet ? [csvSheet] : allowed;
-  const eventSheet = findSheet(sourceSheets, "Event Details") ?? detectKeyValueSheet(sourceSheets);
-  const questionSheet = findSheet(sourceSheets, "Show Questions") ?? detectQuestionSheet(sourceSheets);
-  const mappingSheet = findSheet(sourceSheets, "NEW REG MAPPING") ?? detectRegistrationTypeSheet(sourceSheets);
-  const eventValues = eventSheet ? keyValueRows(eventSheet.rows) : new Map<string, string>();
+  const eventSheet = findSheet(sourceSheets, "Event Details") ?? findSheet(sourceSheets, "1. Event Setup") ?? detectKeyValueSheet(sourceSheets);
+  const questionSheet = findSheet(sourceSheets, "Show Questions") ?? findSheet(sourceSheets, "9. Questions") ?? detectQuestionSheet(sourceSheets);
+  const mappingSheet = findSheet(sourceSheets, "NEW REG MAPPING") ?? findSheet(sourceSheets, "NEW Reg Types & Pricing") ?? findSheet(sourceSheets, "4. Reg Types") ?? detectRegistrationTypeSheet(sourceSheets);
+  const eventValues = eventSheet ? (eventSheet.name === "1. Event Setup" ? formAnswerRows(eventSheet.rows) : keyValueRows(eventSheet.rows)) : new Map<string, string>();
   const questions = questionSheet ? extractQuestions(questionSheet.rows) : [];
   const registrationTypes = mappingSheet ? extractRegistrationTypes(mappingSheet.rows) : [];
   const recognized = new Set<string>();
@@ -72,8 +76,8 @@ export function previewRRDocument(sheets: RRSheet[]): RRDocumentPreview {
 
   return {
     event: {
-      name: lookup(eventValues, "event name"),
-      location: lookup(eventValues, "event location"),
+      name: lookup(eventValues, "event name") ?? lookupContaining(eventValues, "existing event name"),
+      location: lookup(eventValues, "event location") ?? lookupContaining(eventValues, "venue name"),
       timezoneSource: lookup(eventValues, "time zone for event location", "timezone"),
       expoDatesSource: lookup(eventValues, "expo hall dates"),
       conferenceDatesSource: lookup(eventValues, "conference dates"),
@@ -88,17 +92,17 @@ export function previewRRDocument(sheets: RRSheet[]): RRDocumentPreview {
 }
 
 function extractQuestions(rows: RRCell[][]): RRQuestionPreview[] {
-  const headerIndex = rows.findIndex((row) => row.some((cell) => text(cell).toLowerCase().includes("question text")));
+  const headerIndex = rows.findIndex((row) => row.some((cell) => text(cell).toLowerCase().includes("question text")) && !row.some((cell) => text(cell).trim().startsWith("->")));
   if (headerIndex < 0) return [];
   const header = rows[headerIndex].map((cell) => text(cell).toLowerCase());
   const column = (fragment: string) => header.findIndex((value) => value.includes(fragment));
   const pageColumn = column("page displayed");
   const nameColumn = column("demo name");
   const textColumn = column("question text");
-  const answerColumn = column("answer text");
+  const answerColumn = Math.max(column("answer text"), column("answer options"));
   const appearanceColumn = column("question appearance");
-  const requiredColumn = column("required for registrant");
-  const visibilityColumn = column("list reg types");
+  const requiredColumn = Math.max(column("required for registrant"), column("required to answer"));
+  const visibilityColumn = Math.max(column("list reg types"), column("which reg types"));
   if (textColumn < 0) return [];
 
   const questions: RRQuestionPreview[] = [];
@@ -119,20 +123,20 @@ function extractQuestions(rows: RRCell[][]): RRQuestionPreview[] {
       };
       questions.push(current);
       // Some compact CSVs place the first answer on the question's own row.
-      if (answerText) current.answerValues.push(answerText);
+      if (answerText) current.answerValues.push(...splitAnswerValues(answerText));
     } else if (current && answerText) {
-      current.answerValues.push(answerText);
+      current.answerValues.push(...splitAnswerValues(answerText));
     }
   }
   return questions.slice(0, 500);
 }
 
 function extractRegistrationTypes(rows: RRCell[][]): Array<{ key: string; name: string; code: string }> {
-  const headerIndex = rows.findIndex((row) => row.some((cell) => /new\s*-?\s*reg codes?|reg type code/i.test(text(cell))));
+  const headerIndex = rows.findIndex((row) => row.some((cell) => /new\s*-?\s*reg codes?|reg type code/i.test(text(cell))) && !row.some((cell) => text(cell).trim().startsWith("->")));
   if (headerIndex < 0) return [];
   const header = rows[headerIndex].map((cell) => text(cell).toLowerCase());
   const codeColumn = header.findIndex((value) => /new\s*-?\s*reg codes?|reg type code/.test(value));
-  const nameColumn = header.findIndex((value) => /new\s*-?\s*reg type|registration.*name|reg type$/.test(value));
+  const nameColumn = header.findIndex((value) => /new\s*-?\s*reg type|registration.*name|reg type(?: name)?$/.test(value));
   if (codeColumn < 0 || nameColumn < 0) return [];
   const seen = new Set<string>();
   const output: Array<{ key: string; name: string; code: string }> = [];
@@ -158,6 +162,21 @@ function keyValueRows(rows: RRCell[][]): Map<string, string> {
   return values;
 }
 
+function formAnswerRows(rows: RRCell[][]): Map<string, string> {
+  const values = new Map<string, string>();
+  const headerIndex = rows.findIndex((row) => row.some((cell) => /question \(our form\)/i.test(text(cell))) && row.some((cell) => /your answer/i.test(text(cell))));
+  if (headerIndex < 0) return values;
+  const header = rows[headerIndex].map((cell) => text(cell).toLowerCase());
+  const questionColumn = header.findIndex((value) => value.includes("question (our form)"));
+  const answerColumn = header.findIndex((value) => value.includes("your answer"));
+  for (const row of rows.slice(headerIndex + 1)) {
+    const question = at(row, questionColumn).toLowerCase();
+    const answer = at(row, answerColumn);
+    if (question && answer && !values.has(question)) values.set(question, answer);
+  }
+  return values;
+}
+
 function findSheet(sheets: RRSheet[], name: string): RRSheet | undefined {
   return sheets.find((sheet) => sheet.name.toLowerCase() === name.toLowerCase());
 }
@@ -173,6 +192,13 @@ function detectRegistrationTypeSheet(sheets: RRSheet[]): RRSheet | undefined {
 function lookup(values: Map<string, string>, ...keys: string[]): string | null {
   for (const key of keys) if (values.has(key)) return values.get(key)!;
   return null;
+}
+function lookupContaining(values: Map<string, string>, fragment: string): string | null {
+  for (const [key, value] of values) if (key.includes(fragment)) return value;
+  return null;
+}
+function splitAnswerValues(value: string): string[] {
+  return value.split(/\s*;\s*/).map((item) => item.trim()).filter(Boolean);
 }
 function at(row: RRCell[], index: number): string {
   return index < 0 ? "" : text(row[index]).trim();

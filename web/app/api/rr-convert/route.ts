@@ -5,19 +5,24 @@ import ExcelJS from "exceljs";
 import readXlsxFile from "read-excel-file/node";
 import { previewRRDocument, type RRCell, type RRSheet } from "../../../../src/intake/rrDocument";
 import { legacyPreviewAssignments } from "../../../lib/legacy-rr-converter";
+import { compileFullRR, type FullRRAssignment } from "../../../lib/compiler/full-rr";
+import { assertSameOrigin } from "../../../lib/request-security";
 
 export const runtime = "nodejs";
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
 
 export async function POST(request: Request): Promise<Response> {
   try {
+    assertSameOrigin(request);
     const form = await request.formData(); const file = form.get("file");
     if (!(file instanceof File) || !file.name.toLowerCase().endsWith(".xlsx")) return NextResponse.json({ error: "Choose a legacy RR .xlsx workbook." }, { status: 400 });
     if (!file.size || file.size > MAX_FILE_BYTES) return NextResponse.json({ error: "RR workbooks must be between 1 byte and 20 MB." }, { status: 413 });
     const source = Buffer.from(await file.arrayBuffer());
     const parsed = await readXlsxFile(source);
     const sheets: RRSheet[] = parsed.map((sheet) => ({ name: sheet.sheet, rows: sheet.data as RRCell[][] }));
-    const preview = previewRRDocument(sheets); const assignments = legacyPreviewAssignments(preview);
+    const preview = previewRRDocument(sheets);
+    const full = compileFullRR(sheets);
+    const assignments = mergeAssignments(legacyPreviewAssignments(preview), full.assignments);
     const templatePath = resolve(/*turbopackIgnore: true*/ process.cwd(), "templates", "Emerald_Cvent_Intake_Form.xlsx");
     const workbook = new ExcelJS.Workbook(); await workbook.xlsx.load(await readFile(templatePath) as unknown as Parameters<typeof workbook.xlsx.load>[0]);
     for (const item of assignments) { const sheet = workbook.getWorksheet(item.sheet); if (!sheet) throw new Error(`New RR template is missing ${item.sheet}`); sheet.getCell(item.cell).value = item.value; }
@@ -27,6 +32,7 @@ export async function POST(request: Request): Promise<Response> {
     report.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } }; report.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF173F35" } };
     assignments.forEach((item) => report.addRow({ destination: `${item.sheet}!${item.cell}`, source: item.source, confidence: item.confidence, value: String(item.value) }));
     for (const warning of preview.warnings) report.addRow({ destination: "REVIEW", source: "Legacy converter", confidence: "review", value: warning });
+    report.addRow({ destination: "CONTRACT", source: "Full RR compiler", confidence: full.summary.reviewItems ? "review" : "exact", value: `${full.summary.coveredContractFields}/${full.summary.contractFields} contract fields currently populated across ${full.summary.destinationTabs} tabs (${full.summary.assignedCells} destination cells); ${full.summary.reviewItems} review item(s)` });
     report.autoFilter = `A1:D${Math.max(2, report.rowCount)}`;
     const start = workbook.getWorksheet("Start Here"); if (start) start.getCell("A33").value = `Converted from ${safeName(file.name)}. Review yellow cells and the Conversion Report before submission.`;
     const output = Buffer.from(await workbook.xlsx.writeBuffer()); const name = `${safeBase(file.name)}_Converted_New_RR.xlsx`;
@@ -35,3 +41,9 @@ export async function POST(request: Request): Promise<Response> {
 }
 function safeName(name: string): string { return name.split(/[\\/]/).at(-1)?.replace(/[\u0000-\u001f\u007f]/g, "").slice(0, 200) || "legacy-rr.xlsx"; }
 function safeBase(name: string): string { return safeName(name).replace(/\.xlsx$/i, "").replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120); }
+function mergeAssignments(legacy: ReturnType<typeof legacyPreviewAssignments>, compiled: FullRRAssignment[]) {
+  const merged = new Map<string, ReturnType<typeof legacyPreviewAssignments>[number]>();
+  legacy.forEach((item) => merged.set(`${item.sheet}!${item.cell}`, item));
+  compiled.forEach((item) => merged.set(`${item.sheet}!${item.cell}`, { sheet: item.sheet, cell: item.cell, value: item.value, source: item.source, confidence: item.confidence }));
+  return [...merged.values()];
+}

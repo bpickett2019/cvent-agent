@@ -112,11 +112,12 @@ export class CventApi {
     return this.request("/events", { method: "POST", body: JSON.stringify(input) });
   }
 
-  async copyEvent(templateEventId: string, input: Record<string, unknown>): Promise<{ id: string }> {
-    return this.request(`/events/${templateEventId}/copy`, {
-      method: "POST",
-      body: JSON.stringify(input),
-    });
+  /**
+   * Disabled legacy surface. Event copy must use the transport-injected
+   * templateCopyContract after its provisional fixture has been verified.
+   */
+  async copyEvent(_templateEventId: string, _input: Record<string, unknown>): Promise<{ id: string }> {
+    throw new Error("provisional Cvent template-copy contract is disabled on the live CventApi client");
   }
 
   async updateEvent(eventId: string, patch: Record<string, unknown>): Promise<void> {

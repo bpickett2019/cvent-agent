@@ -1,28 +1,32 @@
 id: site/widget-divider
-version: 1
-goal: >
-  Place the specified divider widget at the requested page index using the exact
-  line or space style.
+version: 2
+goal: Reconcile one divider widget on the exact website page with one save and independent read-back.
 preconditions:
-  - The website page with key {{pageKey}} exists
-  - The page is open in the website designer
+  - Event URL evtstub equals the run event id, exact event name is visible, and title is Site Designer
+  - Top-level Save is disabled at task start
 steps:
-  - description: Open page {{pageKey}} and inspect widget position {{index}}
-    selectorHint: "TODO"
-  - description: Add or select the divider widget at position {{index}}
-    selectorHint: "TODO"
-  - description: Apply the exact divider widget configuration {{widget}}
-    selectorHint: "TODO"
-  - description: Save and confirm the divider style
-    selectorHint: "TODO"
+  - description: Open page {{pageKey}} and read the current widget inventory before writing
+    selectorHint: '[data-cvent-id="nucleus-site-editor-site-header"]'
+    verify: 'Exact page name and WEBSITE PAGE type are visible; canvas-base and page-renderer-editable-page-content are present'
+    onMiss: Halt on HEADER AND FOOTER, a registration page, inherited locked content, or an ambiguous page.
+  - description: Find the unique widget identity for index {{index}} or place the exact mapped divider catalog tile, then reconcile {{widget}}
+    selectorHint: '[data-cvent-id="widget-category-structualElements-NucleusDivider"]'
+    value: '{{widget}}'
+    onMiss: Halt if the exact catalog tile, target container, asset, or inspector field is unavailable; do not substitute another widget type or use coordinates.
+  - description: Reassert the exact WEBSITE PAGE surface and save the complete widget reconciliation exactly once
+    selectorHint: '[data-cvent-id="site-designer-save-button"]'
+    verify: 'The same page remains selected and Save returns to disabled'
+  - description: Reload the same event-scoped route, reopen the exact page, and independently read back the widget
+    selectorHint: '[data-cvent-id^="widget-"]'
+    verify: 'Unique widget identity, rendered content, inspector values, placement, and asset references exactly equal {{widget}}'
 idempotency:
-  check: "Widget position {{index}} on page {{pageKey}} is one divider widget whose configuration equals {{widget}}"
+  check: 'A unique widget at {{pageKey}}/{{index}} already reads back exactly as {{widget}}; if equal, do not place or save.'
 failureModes:
-  - symptom: "The requested divider style is unavailable"
-    action: "Halt and report the available styles; do not choose a substitute."
-  - symptom: "The requested widget position is occupied by a different widget type"
-    action: "Halt and report the existing type; do not delete or reorder content."
+  - symptom: Event, clean-state, exact-surface, widget identity, target container, or inspector guard fails
+    action: Halt without changing state or placing a duplicate.
+  - symptom: Read back differs after reload
+    action: Report FAIL with before, intended, and after values; do not retry Save.
 provenance:
-  authoredBy: human
-  validatedAgainst: null
-  lastReviewed: null
+  authoredBy: agent-proposed
+  validatedAgainst: retained-agent-6-site-designer-map
+  lastReviewed: '2026-09-01'

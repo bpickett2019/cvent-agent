@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { jobQueue, publicJob, runControls } from "../../../../../lib/job-server";
+import { assertSameOrigin } from "../../../../../lib/request-security";
 
 export const runtime = "nodejs";
 
@@ -7,6 +8,7 @@ type Context = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, context: Context): Promise<NextResponse> {
   try {
+    assertSameOrigin(request);
     const { id } = await context.params;
     const body = (await request.json()) as { action?: unknown };
     if (body.action !== "pause" && body.action !== "resume" && body.action !== "cancel") {

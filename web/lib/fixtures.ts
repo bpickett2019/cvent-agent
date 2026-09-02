@@ -32,6 +32,13 @@ export interface DashboardRun {
 
 export const initialSpec: EventSpec = {
   specVersion: "1.0",
+  target: {
+    tenantId: "emerald-pilot",
+    accountId: "emerald-cvent",
+    eventId: "e712e34c-6117-4d13-bf4c-8ed54cf2b495",
+    eventName: "(C+D) Medtrade Testing Clone 2",
+    mode: "existingEvent",
+  },
   details: {
     name: "Med Trade 2027",
     code: "MEDTRADE27",

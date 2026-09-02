@@ -1,55 +1,33 @@
-# EXAMPLE ONLY — selectors are placeholders until Week 4 sandbox validation.
-# This file documents the procedure FORMAT, not real Cvent selectors.
-
 id: site/apply-theme
-version: 1
-goal: >
-  Apply the specified template and colour palette to the event website.
-
+version: 2
+goal: Reconcile the mapped Site Designer theme fields exactly, with one save and independent read-back.
 preconditions:
-  - Event exists and is bound to the run's event id
-  - Operator's Cvent session is active in the browser
-
-# Ordered steps. Natural language carries intent; selector hints are attempted
-# first and the agent falls back to reading the page only when they miss.
-# Prefer role/ARIA anchors over CSS classes — Cvent ships UI changes.
+  - Event URL evtstub equals the run event id and the exact authorized event name is visible
+  - Browser title is Site Designer and [data-cvent-id="nucleus-site-editor-site-header"] is visible
+  - Top-level Save is disabled at task start; otherwise halt on a pre-existing draft
 steps:
-  - description: Open the event website designer
-    selectorHint: "role=link[name='Website']"
-    verify: "role=heading[name='Site Designer']"
-
-  - description: Open the theme picker
-    selectorHint: "role=button[name='Theme']"
-
-  - description: Select the template named in the spec
-    selectorHint: "role=option[name='{{theme.templateName}}']"
-    onMiss: >
-      Read the visible template list. If no exact name match exists, halt with
-      reason "template-not-found" and list what was available. Do NOT substitute
-      a similar-looking template.
-
-  - description: Set the primary colour
-    selectorHint: "input[data-role='primary-color']"
-    value: "{{theme.palette.primary}}"
-
-  - description: Save the theme
-    selectorHint: "role=button[name='Save']"
-    verify: "text=Changes saved"
-
-# Checked BEFORE the steps run. If already satisfied, the task is skipped —
-# this is what makes retries resume rather than duplicate.
+  - description: Read the current theme before writing; assert the Theme breadcrumb and exact active theme {{theme.templateName}}
+    selectorHint: '[data-cvent-id="editor-panel-tab-EditorTabTypes.STYLE"]'
+    verify: 'Breadcrumb contains Theme and visible panel contains {{theme.templateName}}'
+    onMiss: Halt with theme-not-found; do not select a similar theme.
+  - description: Reconcile only the requested theme palette and font fields after reading every target value
+    selectorHint: '[data-cvent-id="nucleus-site-editor-menu-item-palette"]'
+    value: '{{theme}}'
+    onMiss: Halt if a requested field lacks an exact mapped control; do not use Change Theme, Save as, Reset Theme Styles, or More Actions.
+  - description: Save the complete reconciled surface exactly once
+    selectorHint: '[data-cvent-id="site-designer-save-button"]'
+    verify: 'The save completes and the top-level Save returns to disabled'
+  - description: Reload the same event-scoped Site Designer route and independently read back the theme
+    selectorHint: '[data-cvent-id="editor-panel-tab-EditorTabTypes.STYLE"]'
+    verify: 'Theme breadcrumb, exact theme name {{theme.templateName}}, and every requested value equal {{theme}}'
 idempotency:
-  check: "The active theme name equals {{theme.templateName}} and the primary swatch equals {{theme.palette.primary}}"
-
-# Known failure modes. Cheaper to encode than to rediscover each run.
+  check: 'Read back shows the exact requested theme fields {{theme}}; if equal, perform no write and no save.'
 failureModes:
-  - symptom: "Unsaved-changes modal blocks navigation"
-    action: "Choose 'Discard' — the spec is the source of truth, not prior state."
-  - symptom: "Theme picker renders empty"
-    action: "Reload once. If still empty, halt with reason 'theme-picker-empty'."
-
-# Set by the merge process, not by the agent. Proposed updates land as a PR.
+  - symptom: Event, title, surface, breadcrumb, or starting clean-state guard fails
+    action: Halt without changing state.
+  - symptom: Saved values differ after reload
+    action: Report FAIL with before, intended, and after values; do not retry Save.
 provenance:
-  authoredBy: human
-  validatedAgainst: null   # fill with the Cvent build id at Week 4
-  lastReviewed: null
+  authoredBy: agent-proposed
+  validatedAgainst: retained-agent-6-site-designer-map
+  lastReviewed: '2026-09-01'
