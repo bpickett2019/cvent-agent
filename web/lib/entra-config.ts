@@ -4,6 +4,7 @@ export interface EntraEnvironment {
   clientSecret: string;
   baseUrl: string;
   authSecret: string;
+  redirectProxyUrl?: string;
 }
 
 const REQUIRED = [
@@ -24,12 +25,21 @@ export function entraEnvironment(environment: NodeJS.ProcessEnv = process.env): 
   if (environment.NODE_ENV === "production" && baseUrl.protocol !== "https:" && !(baseUrl.protocol === "http:" && loopback)) {
     throw new Error("EMERALDX_AUTH_BASE_URL must use HTTPS in production except for an exact OAuth loopback origin");
   }
+  const redirectProxy = environment.EMERALDX_ENTRA_REDIRECT_PROXY_URL?.trim();
+  let redirectProxyUrl: string | undefined;
+  if (redirectProxy) {
+    const parsed = new URL(redirectProxy);
+    const proxyLoopback = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname === "[::1]" || parsed.hostname === "::1";
+    if (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && proxyLoopback)) throw new Error("Entra redirect proxy must use HTTPS or an exact OAuth loopback origin");
+    redirectProxyUrl = parsed.toString();
+  }
   return {
     tenantId: values.EMERALDX_ENTRA_TENANT_ID!,
     clientId: values.EMERALDX_ENTRA_CLIENT_ID!,
     clientSecret: values.EMERALDX_ENTRA_CLIENT_SECRET!,
     baseUrl: baseUrl.origin,
     authSecret: values.AUTH_SECRET!,
+    ...(redirectProxyUrl ? { redirectProxyUrl } : {}),
   };
 }
 

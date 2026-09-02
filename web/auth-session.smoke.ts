@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { authorizeRole, extractEmeraldRoles } from "./lib/entra-authz";
+import { authorizeRole, extractEmeraldRoles, rolesForEntraProfile } from "./lib/entra-authz";
 import { allowUnauthenticatedDevelopment, entraEnvironment } from "./lib/entra-config";
 
 assert.deepEqual(
@@ -26,9 +26,11 @@ const productionLoopback = entraEnvironment({
   EMERALDX_ENTRA_CLIENT_ID: "11f91043-4128-4b76-a405-46e71e034fab",
   EMERALDX_ENTRA_CLIENT_SECRET: "opaque-test-value",
   EMERALDX_AUTH_BASE_URL: "http://localhost:4320",
+  EMERALDX_ENTRA_REDIRECT_PROXY_URL: "http://localhost:3000/auth/callback",
   AUTH_SECRET: "opaque-test-auth-secret",
 });
 assert.equal(productionLoopback.baseUrl, "http://localhost:4320", "production may use OAuth's loopback HTTP exception through an SSH tunnel");
+assert.equal(productionLoopback.redirectProxyUrl, "http://localhost:3000/auth/callback");
 assert.throws(() => entraEnvironment({
   NODE_ENV: "production",
   EMERALDX_ENTRA_TENANT_ID: productionLoopback.tenantId,
@@ -42,6 +44,17 @@ assert.deepEqual(
   extractEmeraldRoles({ roles: ["Operator", "Global Administrator", "Operator", 42] }),
   ["Operator"],
   "only declared app roles may enter the session",
+);
+
+assert.deepEqual(
+  rolesForEntraProfile({ preferred_username: "Bailey.Picket@emeraldX.com" }, ["bailey.picket@emeraldx.com"]),
+  ["Operator"],
+  "a tenant-authenticated pilot operator on the explicit email allowlist receives only Operator",
+);
+assert.deepEqual(
+  rolesForEntraProfile({ preferred_username: "other@emeraldx.com" }, ["bailey.picket@emeraldx.com"]),
+  [],
+  "an unlisted tenant user receives no fallback role",
 );
 
 assert.deepEqual(

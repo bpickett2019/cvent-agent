@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import NextAuth, { type NextAuthConfig } from "next-auth";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import { allowUnauthenticatedDevelopment, entraEnvironment, type EntraEnvironment } from "./lib/entra-config";
-import { authorizeRole, extractEmeraldRoles } from "./lib/entra-authz";
+import { authorizeRole, extractEmeraldRoles, rolesForEntraProfile } from "./lib/entra-authz";
 
 const developmentBypassSecret = `${crypto.randomUUID()}${crypto.randomUUID()}`;
 
@@ -21,6 +21,7 @@ function runtimeEnvironment(): EntraEnvironment {
 
 function authConfig(): NextAuthConfig {
   const environment = runtimeEnvironment();
+  const operatorEmails = (process.env.EMERALDX_ENTRA_OPERATOR_EMAILS ?? "").split(",").map((value) => value.trim()).filter(Boolean);
   process.env.AUTH_URL = environment.baseUrl;
   const secure = process.env.NODE_ENV === "production";
   return {
@@ -33,6 +34,7 @@ function authConfig(): NextAuthConfig {
       clientSecret: environment.clientSecret,
       issuer: `https://login.microsoftonline.com/${encodeURIComponent(environment.tenantId)}/v2.0`,
       checks: ["pkce", "state", "nonce"],
+      redirectProxyUrl: environment.redirectProxyUrl,
       authorization: { params: { scope: "openid profile email" } },
     })],
     cookies: {
@@ -57,10 +59,10 @@ function authConfig(): NextAuthConfig {
         return candidate.origin === environment.baseUrl ? candidate.toString() : environment.baseUrl;
       },
       signIn({ profile }) {
-        return extractEmeraldRoles(profile).length > 0;
+        return rolesForEntraProfile(profile, operatorEmails).length > 0;
       },
       jwt({ token, profile }) {
-        if (profile) token.roles = extractEmeraldRoles(profile);
+        if (profile) token.roles = rolesForEntraProfile(profile, operatorEmails);
         return token;
       },
       session({ session, token }) {

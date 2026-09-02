@@ -14,6 +14,16 @@ export function extractEmeraldRoles(claims: unknown): EmeraldRole[] {
   ))];
 }
 
+export function rolesForEntraProfile(claims: unknown, operatorEmails: readonly string[]): EmeraldRole[] {
+  const assigned = extractEmeraldRoles(claims);
+  if (assigned.length > 0) return assigned;
+  if (!claims || typeof claims !== "object") return [];
+  const profile = claims as { preferred_username?: unknown; email?: unknown; upn?: unknown };
+  const candidate = [profile.preferred_username, profile.email, profile.upn].find((value): value is string => typeof value === "string")?.trim().toLowerCase();
+  const allowed = new Set(operatorEmails.map((value) => value.trim().toLowerCase()).filter(Boolean));
+  return candidate && allowed.has(candidate) ? ["Operator"] : [];
+}
+
 export type RoleAuthorization =
   | { authorized: true; role: EmeraldRole }
   | { authorized: false; status: 401 | 403; reason: "authentication-required" | "insufficient-role" };
