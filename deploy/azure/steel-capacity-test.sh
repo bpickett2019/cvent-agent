@@ -84,8 +84,8 @@ safe_run_id=${RUN_ID//[^a-zA-Z0-9_.-]/-}
 for ((i=1; i<=COUNT; i++)); do
   name="steel-capacity-${safe_run_id}-${i}"
   cidfile="$cid_dir/${i}.cid"
-  id=$(docker run -d --cidfile "$cidfile" --name "$name" --read-only --tmpfs /tmp:rw,noexec,nosuid,size=1g \
-    --security-opt no-new-privileges --cap-drop ALL --pids-limit 512 \
+  id=$(docker run -d --cidfile "$cidfile" --name "$name" --tmpfs /tmp:rw,noexec,nosuid,size=1g \
+    --security-opt no-new-privileges --pids-limit 512 \
     -p 127.0.0.1::3000 "$IMAGE")
   container_ids+=("$id")
   container_names+=("$name")
