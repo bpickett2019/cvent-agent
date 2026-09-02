@@ -7,11 +7,14 @@ import { previewRRDocument, type RRCell, type RRSheet } from "../../../../src/in
 import { legacyPreviewAssignments } from "../../../lib/legacy-rr-converter";
 import { compileFullRR, type FullRRAssignment } from "../../../lib/compiler/full-rr";
 import { assertSameOrigin } from "../../../lib/request-security";
+import { requireRole } from "../../../lib/require-role";
 
 export const runtime = "nodejs";
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
 
 export async function POST(request: Request): Promise<Response> {
+  const denied = await requireRole("Operator");
+  if (denied) return denied;
   try {
     assertSameOrigin(request);
     const form = await request.formData(); const file = form.get("file");

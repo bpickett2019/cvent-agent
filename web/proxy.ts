@@ -1,17 +1,10 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { authorizeOperatorRequest, operatorAuthOptions } from "./lib/operator-auth";
+import type { NextFetchEvent, NextMiddleware, NextRequest } from "next/server";
+import { auth } from "./auth";
 
-export function proxy(request: NextRequest): NextResponse {
-  const authorization = authorizeOperatorRequest(request, operatorAuthOptions());
-  if (authorization.authorized) return NextResponse.next();
+const entraMiddleware = auth as unknown as NextMiddleware;
 
-  return new NextResponse("Operator authentication required", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="EmeraldX operator console", charset="UTF-8"',
-      "Cache-Control": "no-store",
-    },
-  });
+export function proxy(request: NextRequest, event: NextFetchEvent) {
+  return entraMiddleware(request, event);
 }
 
 export const config = {

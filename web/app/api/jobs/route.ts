@@ -11,10 +11,13 @@ import { assertTemplateCopyExecutionAvailable } from "../../../../src/run/copyTe
 import { jobQueue, publicJob, runControls } from "../../../lib/job-server";
 import { startLocalWorker } from "../../../lib/worker-launcher";
 import { assertSameOrigin } from "../../../lib/request-security";
+import { requireRole } from "../../../lib/require-role";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request): Promise<NextResponse> {
+  const denied = await requireRole("Operator");
+  if (denied) return denied;
   try {
     assertSameOrigin(request);
     const body = (await request.json()) as { spec?: unknown; operator?: unknown };

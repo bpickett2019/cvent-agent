@@ -5,6 +5,7 @@ import { compileFullRR, compileFullRRToEventSpec } from "../../../lib/compiler/f
 import { buildOperatorReview } from "../../../lib/operator-review";
 import { initialSpec } from "../../../lib/fixtures";
 import { assertSameOrigin } from "../../../lib/request-security";
+import { requireRole } from "../../../lib/require-role";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,8 @@ const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_PARSED_CELLS = 500_000;
 
 export async function POST(request: Request): Promise<NextResponse> {
+  const denied = await requireRole("Operator");
+  if (denied) return denied;
   try {
     assertSameOrigin(request);
     const form = await request.formData();

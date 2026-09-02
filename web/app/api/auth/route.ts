@@ -3,12 +3,15 @@ import { resolve } from "node:path";
 import { captureGoldenLogin, goldenStatus, resetLoginMaintenance, startLoginMaintenance } from "../../../lib/steel-auth";
 import { DockerSteelWorkspaceRuntime, FileSteelWorkspaceManager } from "../../../../src/workspace/manager";
 import { assertSameOrigin } from "../../../lib/request-security";
+import { requireRole } from "../../../lib/require-role";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() { return NextResponse.json(await goldenStatus()); }
 
 export async function POST(request: Request) {
+  const denied = await requireRole("Operator");
+  if (denied) return denied;
   try {
     assertSameOrigin(request);
     const body = await request.json() as { action?: string };

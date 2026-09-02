@@ -62,8 +62,11 @@ assert.equal(authorizeOperatorRequest(new Request("https://pilot.example/"), { p
 assert.equal(authorizeOperatorRequest(new Request("http://localhost:3000/"), { production: false, credentials: null, allowUnauthenticatedDevelopment: true }).authorized, true);
 assert.equal(authorizeOperatorRequest(new Request("http://localhost:3000/"), { production: false, credentials: null, allowUnauthenticatedDevelopment: false }).authorized, false, "development bypass must be explicit");
 const proxySource = await readFile("web/proxy.ts", "utf8");
-assert.match(proxySource, /authorizeOperatorRequest/);
-assert.match(proxySource, /WWW-Authenticate/);
+const entraAuthSource = await readFile("web/auth.ts", "utf8");
+assert.match(proxySource, /export function proxy/);
+assert.match(proxySource, /import \{ auth \}/);
+assert.match(entraAuthSource, /authorized\(\{ auth, request \}\)/);
+assert.match(entraAuthSource, /authorizeRole\(auth, "Viewer"\)/);
 
 const monitor = await readFile("web/components/run-monitor.tsx", "utf8");
 const cards = await readFile("web/components/agent-workspaces.tsx", "utf8");

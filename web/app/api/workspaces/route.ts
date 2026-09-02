@@ -4,6 +4,7 @@ import { DockerSteelWorkspaceRuntime, FileSteelWorkspaceManager } from "../../..
 import { runControls } from "../../../lib/job-server";
 import { promoteWorkspaceAuthentication } from "../../../lib/workspace-auth-promotion";
 import { assertSameOrigin, publicWorkspace } from "../../../lib/request-security";
+import { requireRole } from "../../../lib/require-role";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +22,8 @@ export async function GET(): Promise<NextResponse> {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
+  const denied = await requireRole("Operator");
+  if (denied) return denied;
   try {
     assertSameOrigin(request);
     const body = await request.json() as { action?: string; id?: string; name?: string };
