@@ -20,9 +20,24 @@ export type PublicWorkspace = Pick<
 /** Reject browser state changes unless the request came from this UI origin. */
 export function assertSameOrigin(request: Request): void {
   const origin = request.headers.get("origin");
-  if (!origin || origin !== new URL(request.url).origin) {
+  if (!origin) throw new Error("State-changing requests must be same-origin");
+  let supplied: URL;
+  try {
+    supplied = new URL(origin);
+  } catch {
     throw new Error("State-changing requests must be same-origin");
   }
+  const target = new URL(request.url);
+  if (supplied.origin === target.origin) return;
+  const loopback = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+  if (
+    supplied.origin === origin &&
+    supplied.protocol === target.protocol &&
+    supplied.port === target.port &&
+    loopback.has(supplied.hostname.toLowerCase()) &&
+    loopback.has(target.hostname.toLowerCase())
+  ) return;
+  throw new Error("State-changing requests must be same-origin");
 }
 
 /** Deliberately excludes container, job, provider-session, and API coordinates. */

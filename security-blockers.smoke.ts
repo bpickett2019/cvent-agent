@@ -31,6 +31,9 @@ assert.equal("ownerJobId" in dto, false);
 
 assert.doesNotThrow(() => assertSameOrigin(new Request("http://localhost:3000/api/workspaces", { method: "POST", headers: { origin: "http://localhost:3000" } })));
 assert.doesNotThrow(() => assertSameOrigin(new Request("http://127.0.0.1:3000/api/auth", { method: "POST", headers: { origin: "http://127.0.0.1:3000" } })));
+assert.doesNotThrow(() => assertSameOrigin(new Request("http://localhost:4320/api/rr-preview", { method: "POST", headers: { origin: "http://127.0.0.1:4320" } })), "Next.js local canonicalization may map 127.0.0.1 to localhost without changing protocol or port");
+assert.throws(() => assertSameOrigin(new Request("http://localhost:4320/api/rr-preview", { method: "POST", headers: { origin: "http://127.0.0.1:4321" } })), /same-origin/i, "loopback aliases with different ports must remain cross-origin");
+assert.throws(() => assertSameOrigin(new Request("https://localhost:4320/api/rr-preview", { method: "POST", headers: { origin: "http://127.0.0.1:4320" } })), /same-origin/i, "loopback aliases with different protocols must remain cross-origin");
 assert.throws(() => assertSameOrigin(new Request("http://localhost:3000/api/workspaces", { method: "POST", headers: { origin: "https://evil.example" } })), /same-origin/i);
 assert.throws(() => assertSameOrigin(new Request("http://localhost:3000/api/auth", { method: "POST" })), /same-origin/i);
 
