@@ -36,9 +36,9 @@ export function OperatorDashboard() {
       <div className="workspace">
         <header className="topbar"><div className="breadcrumbs"><span>Event Operations</span><b>/</b><strong>{navigation.find((item) => item.id === view)?.label}</strong></div><div className="topbar-actions"><GoldenLogin /><button className="icon-button" aria-label="Help">?</button><button className="icon-button notification" aria-label="Notifications"><Icon name="bell" /><span /></button></div></header>
         <main className="workspace-main">
-          {view === "intake" && <IntakeForm seed={initialSpec} />}
-          {view === "monitor" && <RunMonitor />}
-          {view === "review" && <ReviewPage runs={runs} />}
+          {view === "intake" && <IntakeForm seed={initialSpec} onQueued={() => setView("monitor")} />}
+          {view === "monitor" && <RunMonitor onRunComplete={() => setView("review")} />}
+          {view === "review" && <ReviewPage runs={runs} onDecisionComplete={() => setView("triage")} />}
           {view === "triage" && <TriageQueue runs={runs} />}
         </main>
       </div>

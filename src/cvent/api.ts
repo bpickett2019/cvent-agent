@@ -188,7 +188,7 @@ export class CventApi {
 
   /** The question read surface does not expose conditional visibility rules. */
   async listQuestions(eventId: string): Promise<CventQuestion[]> {
-    return this.listAll(`/events/${eventId}/questions`);
+    return this.listAll(`/event-questions?eventId=${eventId}`);
   }
 
   async listFees(eventId: string): Promise<CventFee[]> {

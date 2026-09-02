@@ -23,6 +23,12 @@
           "eventName": "(C+D) Medtrade Testing Clone 2",
           "permissions": ["read", "configure"],
           "enabled": true
+        },
+        {
+          "eventId": "f58e1bf4-7559-437a-bab2-9210e3cf1895",
+          "eventName": "MOCK ONLY - Medtrade CVENT Agent E2E 2027",
+          "permissions": ["read", "configure"],
+          "enabled": true
         }
       ]
     }

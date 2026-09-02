@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AgentWorkspaces } from "./agent-workspaces";
 
 interface MonitoredJob {
   id: string;
   eventName: string;
   eventCode: string | null;
-  status: "queued" | "paused" | "running" | "succeeded" | "failed" | "cancelled";
+  status: "queued" | "paused" | "running" | "halted" | "succeeded" | "failed" | "cancelled";
   attempts: number;
   error: string | null;
   updatedAt: string;
@@ -20,12 +20,13 @@ interface MonitoredJob {
   };
 }
 
-export function RunMonitor() {
+export function RunMonitor({ onRunComplete }: { onRunComplete?: () => void }) {
   const [jobs, setJobs] = useState<MonitoredJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<Record<string, string>>({});
   const [selectedViewer, setSelectedViewer] = useState<{ url: string; eventName: string; workspaceId?: string; interactive: boolean } | null>(null);
   const [error, setError] = useState("");
+  const observedActiveRun = useRef(false);
 
   const watchViewer = useCallback((viewer: { url: string; eventName: string; workspaceId?: string; interactive?: boolean }) => {
     setSelectedViewer({ ...viewer, interactive: viewer.interactive ?? false });
@@ -51,6 +52,14 @@ export function RunMonitor() {
     const timer = window.setInterval(() => void refresh(), 2_000);
     return () => window.clearInterval(timer);
   }, [refresh]);
+
+  useEffect(() => {
+    if (jobs.some((job) => job.status === "running" || job.status === "queued" || job.status === "paused")) observedActiveRun.current = true;
+    if (observedActiveRun.current && jobs.length > 0 && jobs.every((job) => ["halted", "succeeded", "failed", "cancelled"].includes(job.status))) {
+      const timer = window.setTimeout(() => onRunComplete?.(), 900);
+      return () => window.clearTimeout(timer);
+    }
+  }, [jobs, onRunComplete]);
 
   const control = async (job: MonitoredJob, action: "pause" | "resume" | "cancel") => {
     if (action === "cancel" && !window.confirm(`Cancel ${job.eventName}? Completed Cvent steps will remain for triage.`)) return;
@@ -99,7 +108,7 @@ export function RunMonitor() {
         {jobs.map((job) => {
           const isActive = job.status === "running";
           const isPaused = job.status === "paused" || job.control.paused;
-          const terminal = ["succeeded", "failed", "cancelled"].includes(job.status);
+          const terminal = ["halted", "succeeded", "failed", "cancelled"].includes(job.status);
           return (
             <article className="monitor-card" key={job.id}>
               <header><div className={`monitor-state ${isPaused ? "paused" : job.status}`}><span />{isPaused ? "Paused" : statusLabel(job.status)}</div><div><h2>{job.eventName}</h2><p>{job.eventCode ?? "No event code"} · Job {job.id}</p></div><time>{formatTime(job.updatedAt)}</time></header>
@@ -122,7 +131,7 @@ export function RunMonitor() {
 }
 
 function statusLabel(status: MonitoredJob["status"]): string {
-  return ({ queued: "Queued", paused: "Paused", running: "Running", succeeded: "Completed", failed: "Failed", cancelled: "Cancelled" })[status];
+  return ({ queued: "Queued", paused: "Paused", running: "Running", halted: "Needs review", succeeded: "Completed", failed: "Failed", cancelled: "Cancelled" })[status];
 }
 function formatTime(value: string): string {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", second: "2-digit" }).format(new Date(value));

@@ -138,7 +138,10 @@ async function executeRun(
         baseUrl: (workspace?.apiUrl ?? process.env.STEEL_BASE_URL?.trim()) || undefined,
         sessionContext,
         interactive: Boolean(workspace),
-      });
+        initialUrl: payload.spec.target?.mode === "existingEvent"
+          ? `https://app.cvent.com/subscribers/events2/Details/EventDetails/Index/View?evtStub=${payload.spec.target.eventId}`
+          : undefined,
+        });
   const api = new CventApi({
     clientId: requiredEnv("CVENT_CLIENT_ID"),
     clientSecret: requiredEnv("CVENT_CLIENT_SECRET"),

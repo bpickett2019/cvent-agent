@@ -5,8 +5,11 @@ import { z } from "zod";
 const SessionContextSchema = z
   .object({
     cookies: z.array(z.record(z.unknown())),
-    localStorage: z.record(z.string()).optional(),
+    localStorage: z.union([z.record(z.string()), z.record(z.record(z.string()))]).optional(),
     localStorageOrigin: z.string().url().optional(),
+    sessionStorage: z.record(z.record(z.string())).optional(),
+    indexedDB: z.record(z.array(z.unknown())).optional(),
+    userAgent: z.string().optional(),
   })
   .strict();
 

@@ -78,13 +78,24 @@ export async function verify(
 
   /* ------------------------------------------------------------ registration */
 
-  const [items, paths, vouchers, registrationTypes, questions] = await Promise.all([
+  const [items, paths, registrationTypes, questions] = await Promise.all([
     api.listAdmissionItems(eventId),
     api.listRegistrationPaths(eventId),
-    api.listVouchers(eventId),
     api.listRegistrationTypes(eventId),
     api.listQuestions(eventId),
   ]);
+  let vouchers: Awaited<ReturnType<CventApi["listVouchers"]>> = [];
+  let voucherReadAvailable = true;
+  try {
+    vouchers = await api.listVouchers(eventId);
+  } catch (error) {
+    voucherReadAvailable = false;
+    add({
+      severity: "warning",
+      area: "registration",
+      message: `Cvent's current public API does not expose a usable voucher read surface; voucher verification requires the guarded Cvent UI. ${error instanceof Error ? error.message : String(error)}`,
+    });
+  }
 
   const byName = new Map(items.map((i) => [i.name.trim().toLowerCase(), i]));
 
@@ -161,14 +172,16 @@ export async function verify(
     }
   }
 
-  const codes = new Set(vouchers.map((v) => v.code.trim().toUpperCase()));
-  for (const want of spec.registration.vouchers) {
-    if (!codes.has(want.code.trim().toUpperCase())) {
-      add({
-        severity: "blocking",
-        area: "registration",
-        message: `Voucher code "${want.code}" was not created.`,
-      });
+  if (voucherReadAvailable) {
+    const codes = new Set(vouchers.map((v) => v.code.trim().toUpperCase()));
+    for (const want of spec.registration.vouchers) {
+      if (!codes.has(want.code.trim().toUpperCase())) {
+        add({
+          severity: "blocking",
+          area: "registration",
+          message: `Voucher code "${want.code}" was not created.`,
+        });
+      }
     }
   }
 

@@ -16,6 +16,7 @@ type RegistrationPath = EventSpec["registration"]["paths"][number];
 
 interface IntakeFormProps {
   seed: EventSpec;
+  onQueued?: () => void;
 }
 
 const answerTypes: Array<{ value: Question["answerType"]; label: string }> = [
@@ -33,8 +34,10 @@ const answerTypes: Array<{ value: Question["answerType"]; label: string }> = [
 ];
 const APPROVED_TEMPLATE_ID = "e712e34c-6117-4d13-bf4c-8ed54cf2b495";
 const APPROVED_TEMPLATE_NAME = "(C+D) Medtrade Testing Clone 2";
+const E2E_EVENT_ID = "f58e1bf4-7559-437a-bab2-9210e3cf1895";
+const E2E_EVENT_NAME = "MOCK ONLY - Medtrade CVENT Agent E2E 2027";
 
-export function IntakeForm({ seed }: IntakeFormProps) {
+export function IntakeForm({ seed, onQueued }: IntakeFormProps) {
   const [spec, setSpec] = useState<EventSpec>(() => structuredClone(seed));
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -77,7 +80,7 @@ export function IntakeForm({ seed }: IntakeFormProps) {
       if (!response.ok || !body.job) throw new Error(body.error || "The run could not be queued.");
       setQueuedJobId(body.job.id);
       setSubmitted(true);
-      document.getElementById("intake-top")?.scrollIntoView({ behavior: "smooth" });
+      window.setTimeout(() => onQueued?.(), 700);
     } catch (error) {
       setSubmissionError(error instanceof Error ? error.message : "The run could not be queued.");
     } finally {
@@ -92,6 +95,7 @@ export function IntakeForm({ seed }: IntakeFormProps) {
       next.details.templateEventId = APPROVED_TEMPLATE_ID;
     }
     setSpec(next); setRrApplied(true); setSubmitted(false); setSubmissionError(""); setQueuedJobId(""); submissionKey.current = crypto.randomUUID();
+    window.setTimeout(() => document.getElementById("intake-review")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
   };
 
   return (
@@ -135,7 +139,7 @@ export function IntakeForm({ seed }: IntakeFormProps) {
 
       <RRDocumentImport onApply={applyNormalizedSpec} />
 
-      <section className="form-section"><div className="section-head"><span className="section-number">00</span><div><h2>Authorized Cvent target</h2><p>Choose the existing training clone or copy the explicitly approved template. New copies remain unpublished.</p></div></div><div className="section-body"><div className="segmented-control"><button type="button" className={targetMode === "existingEvent" ? "active" : ""} onClick={() => { setTargetMode("existingEvent"); update((draft) => { draft.target = { mode: "existingEvent", tenantId: "emerald-pilot", accountId: "emerald-cvent", eventId: APPROVED_TEMPLATE_ID, eventName: APPROVED_TEMPLATE_NAME }; draft.details.name = APPROVED_TEMPLATE_NAME; delete draft.details.templateEventId; }); }}>Use existing training event</button><button type="button" className={targetMode === "copyTemplate" ? "active" : ""} onClick={() => { setTargetMode("copyTemplate"); update((draft) => { draft.target = { mode: "copyTemplate", tenantId: "emerald-pilot", accountId: "emerald-cvent", templateEventId: APPROVED_TEMPLATE_ID, templateEventName: APPROVED_TEMPLATE_NAME, newEventName: draft.details.name, ...(draft.details.code ? { newEventCode: draft.details.code } : {}) }; draft.details.templateEventId = APPROVED_TEMPLATE_ID; }); }}>Copy approved template</button></div><div className="form-grid two"><Field label="Approved template name"><input value={APPROVED_TEMPLATE_NAME} readOnly /></Field><Field label="Approved template UUID"><input value={APPROVED_TEMPLATE_ID} readOnly /></Field></div></div></section>
+      <section className="form-section" id="intake-review"><div className="section-head"><span className="section-number">00</span><div><h2>Authorized Cvent target</h2><p>Choose an explicitly authorized destination. New copies remain unpublished.</p></div></div><div className="section-body"><div className="segmented-control"><button type="button" onClick={() => { setTargetMode("existingEvent"); update((draft) => { draft.target = { mode: "existingEvent", tenantId: "emerald-pilot", accountId: "emerald-cvent", eventId: APPROVED_TEMPLATE_ID, eventName: APPROVED_TEMPLATE_NAME }; draft.details.name = APPROVED_TEMPLATE_NAME; delete draft.details.templateEventId; }); }}>Use existing training event</button><button type="button" onClick={() => { setTargetMode("existingEvent"); update((draft) => { draft.target = { mode: "existingEvent", tenantId: "emerald-pilot", accountId: "emerald-cvent", eventId: E2E_EVENT_ID, eventName: E2E_EVENT_NAME }; draft.details.name = E2E_EVENT_NAME; delete draft.details.templateEventId; }); }}>Use created mock E2E event</button><button type="button" className={targetMode === "copyTemplate" ? "active" : ""} onClick={() => { setTargetMode("copyTemplate"); update((draft) => { draft.target = { mode: "copyTemplate", tenantId: "emerald-pilot", accountId: "emerald-cvent", templateEventId: APPROVED_TEMPLATE_ID, templateEventName: APPROVED_TEMPLATE_NAME, newEventName: draft.details.name, ...(draft.details.code ? { newEventCode: draft.details.code } : {}) }; draft.details.templateEventId = APPROVED_TEMPLATE_ID; }); }}>Copy approved template</button></div><div className="form-grid two"><Field label="Approved template name"><input value={APPROVED_TEMPLATE_NAME} readOnly /></Field><Field label="Approved template UUID"><input value={APPROVED_TEMPLATE_ID} readOnly /></Field></div></div></section>
 
       <Section number="01" title="Event details" description="These reviewed details apply only to the authorized existing clone; no event is created or copied.">
         <div className="form-grid three">

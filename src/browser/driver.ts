@@ -31,9 +31,12 @@ export interface BrowserProvider {
 
 export interface CapturedBrowserContext {
   cookies: unknown[];
-  /** Flat storage captured from one explicitly recorded origin. */
-  localStorage?: Record<string, string>;
+  /** Legacy flat storage or Steel's complete origin-grouped storage. */
+  localStorage?: Record<string, string> | Record<string, Record<string, string>>;
   localStorageOrigin?: string;
+  sessionStorage?: Record<string, Record<string, string>>;
+  indexedDB?: Record<string, unknown[]>;
+  userAgent?: string;
 }
 
 export interface SteelConfig {
@@ -44,6 +47,8 @@ export interface SteelConfig {
   timeoutMs?: number;
   /** Enables attended input after the run is cooperatively paused for takeover. */
   interactive?: boolean;
+  /** Exact authorized page opened before the first agent action. */
+  initialUrl?: string;
 }
 
 export const STEEL_WORKER_TIMEOUT_MS = 3 * 60 * 60 * 1_000;
@@ -55,9 +60,11 @@ export class SteelProvider implements BrowserProvider {
   async connect() {
     const base = this.cfg.baseUrl ?? "https://api.steel.dev";
     const context = this.cfg.sessionContext;
-    if (context?.localStorage && !context.localStorageOrigin) {
-      throw new Error("Steel session replay requires the captured localStorage origin");
-    }
+    const groupedLocalStorage = context?.localStorage
+      ? context.localStorageOrigin
+        ? { [context.localStorageOrigin]: context.localStorage as Record<string, string> }
+        : context.localStorage as Record<string, Record<string, string>>
+      : undefined;
     const res = await fetch(`${base}/v1/sessions`, {
       method: "POST",
       headers: { "steel-api-key": this.cfg.apiKey, "content-type": "application/json" },
@@ -70,9 +77,9 @@ export class SteelProvider implements BrowserProvider {
               cookies: context.cookies,
               // Steel's API requires storage grouped by origin. Local capture
               // stays flat so Playwright can replay it with addInitScript.
-              ...(context.localStorage && context.localStorageOrigin
-                ? { localStorage: { [context.localStorageOrigin]: context.localStorage } }
-                : {}),
+              ...(groupedLocalStorage ? { localStorage: groupedLocalStorage } : {}),
+              ...(context.sessionStorage ? { sessionStorage: context.sessionStorage } : {}),
+              ...(context.indexedDB ? { indexedDB: context.indexedDB } : {}),
             }
           : undefined,
         timeout: this.cfg.timeoutMs ?? STEEL_WORKER_TIMEOUT_MS,
@@ -90,6 +97,11 @@ export class SteelProvider implements BrowserProvider {
     const rawViewer = this.cfg.baseUrl ? session.debugUrl ?? session.sessionViewerUrl : session.sessionViewerUrl ?? session.debugUrl;
     const viewerUrl = rawViewer ? rebaseProviderUrl(rawViewer, base, false) : undefined;
     const browser = await chromium.connectOverCDP(websocketUrl);
+    if (this.cfg.initialUrl) {
+      const context = browser.contexts()[0] ?? await browser.newContext();
+      const page = context.pages()[0] ?? await context.newPage();
+      await page.goto(this.cfg.initialUrl, { waitUntil: "domcontentloaded" });
+    }
     return {
       browser,
       viewerUrl,
@@ -124,7 +136,12 @@ export class LocalPlaywrightProvider implements BrowserProvider {
         const context = await browser.newContext();
         const cookies = this.opts.sessionContext.cookies as Parameters<BrowserContext["addCookies"]>[0];
         if (cookies.length) await context.addCookies(cookies);
-        const localStorage = this.opts.sessionContext.localStorage;
+        const capturedStorage = this.opts.sessionContext.localStorage;
+        const localStorage = capturedStorage
+          ? Object.values(capturedStorage)[0] && typeof Object.values(capturedStorage)[0] === "object"
+            ? Object.values(capturedStorage as Record<string, Record<string, string>>)[0]
+            : capturedStorage as Record<string, string>
+          : undefined;
         if (localStorage) {
           await context.addInitScript((entries: Record<string, string>) => {
             try {

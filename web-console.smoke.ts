@@ -70,4 +70,8 @@ assert.match(intakeForm, /Copy approved template/);
 assert.match(intakeForm, /e712e34c-6117-4d13-bf4c-8ed54cf2b495/);
 assert.match(intakeForm, /rrApplied/);
 assert.match(intakeForm, /Upload and apply an RR workbook/);
+assert.match(intakeForm, /scrollIntoView\(\{ behavior: "smooth", block: "start" \}\)/, "green intake actions advance to the next section");
+assert.match(dashboard, /onQueued=.*setView\("monitor"\)/, "queued intake advances to agent monitor");
+assert.match(dashboard, /onRunComplete=.*setView\("review"\)/, "completed agent work advances to review");
+assert.match(dashboard, /onDecisionComplete=.*setView\("triage"\)/, "completed review advances to triage");
 console.log("web console smoke passed");

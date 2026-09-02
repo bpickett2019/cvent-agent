@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import type { Finding } from "../../src/verify/verifier";
 import type { DashboardRun } from "../lib/fixtures";
 
-export function ReviewPage({ runs }: { runs: DashboardRun[] }) {
+export function ReviewPage({ runs, onDecisionComplete }: { runs: DashboardRun[]; onDecisionComplete?: () => void }) {
   const reviewable = runs.filter((run) => run.report);
   const [selectedId, setSelectedId] = useState(reviewable[0]?.id ?? "");
   const [decision, setDecision] = useState<Record<string, "approved" | "sent-back">>({});
@@ -79,7 +79,7 @@ export function ReviewPage({ runs }: { runs: DashboardRun[] }) {
         <aside className="decision-panel">
           <span className="eyebrow">Operator decision</span><h3>Ready for handoff?</h3><p>Approval confirms the API findings and screenshots have been reviewed. It does not publish the event.</p>
           <div className="decision-checks"><span><b className={blocking.length ? "not-done" : "done"}>{blocking.length ? "!" : "✓"}</b>Blocking findings resolved</span><span><b className="done">✓</b>Event remains in Draft</span><span><b className={visibilityGaps.length ? "attention" : "done"}>{visibilityGaps.length ? "◎" : "✓"}</b>Visibility reviewed manually</span></div>
-          <button className="approve-button" disabled={blocking.length > 0} onClick={() => setDecision((current) => ({ ...current, [run.id]: "approved" }))}>Approve run</button>
+          <button className="approve-button" disabled={blocking.length > 0} onClick={() => { setDecision((current) => ({ ...current, [run.id]: "approved" })); window.setTimeout(() => onDecisionComplete?.(), 1200); }}>Approve run</button>
           <button className="send-back-button" onClick={() => setShowSendBack(true)}>Send back</button>
           <small>Publishing remains a separate, human-controlled action in Cvent.</small>
         </aside>

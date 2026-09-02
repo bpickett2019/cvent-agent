@@ -5,6 +5,14 @@ export const AUTHORIZED_CVENT_EVENT = {
   eventName: "(C+D) Medtrade Testing Clone 2",
 } as const;
 
+export const AUTHORIZED_CVENT_EVENTS = [
+  AUTHORIZED_CVENT_EVENT,
+  {
+    eventId: "f58e1bf4-7559-437a-bab2-9210e3cf1895",
+    eventName: "MOCK ONLY - Medtrade CVENT Agent E2E 2027",
+  },
+] as const;
+
 export function authorizedExecutionError(spec: EventSpec): string | null {
   if (spec.target?.mode === "copyTemplate") {
     if (
@@ -15,13 +23,16 @@ export function authorizedExecutionError(spec: EventSpec): string | null {
     ) return `Template copy is restricted to ${AUTHORIZED_CVENT_EVENT.eventName} (${AUTHORIZED_CVENT_EVENT.eventId}).`;
     return null;
   }
+  const target = spec.target;
+  const authorizedEvent = target?.mode === "existingEvent"
+    ? AUTHORIZED_CVENT_EVENTS.find((event) => event.eventId === target.eventId && event.eventName === target.eventName)
+    : undefined;
   if (
-    spec.target?.mode !== "existingEvent" ||
-    spec.target.eventId !== AUTHORIZED_CVENT_EVENT.eventId ||
-    spec.target.eventName !== AUTHORIZED_CVENT_EVENT.eventName ||
-    spec.details.name !== AUTHORIZED_CVENT_EVENT.eventName
+    target?.mode !== "existingEvent" ||
+    !authorizedEvent ||
+    spec.details.name !== authorizedEvent.eventName
   ) {
-    return `Execution is restricted to the authorized Cvent clone ${AUTHORIZED_CVENT_EVENT.eventName} (${AUTHORIZED_CVENT_EVENT.eventId}).`;
+    return `Execution is restricted to an explicitly authorized Cvent event (${AUTHORIZED_CVENT_EVENTS.map((event) => `${event.eventName} (${event.eventId})`).join(" or ")}).`;
   }
   if (spec.details.templateEventId) {
     return "Existing-event mode cannot create or copy an event; remove the template event ID before queueing.";
