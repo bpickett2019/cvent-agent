@@ -87,10 +87,19 @@ export function RRDocumentImport({ onApply }: { onApply?: (spec: EventSpec) => v
             <div><small>Questions</small><strong>{result.normalizedSpec.questions.length}</strong><span>compiled EventSpec definitions</span></div>
             <div><small>Allowed sheets used</small><strong>{result.preview.recognizedSheets.length}</strong><span>{result.preview.ignoredSheets.length} sheets excluded</span></div>
           </div>
-          {result.compiler && <p><b>Compiler coverage:</b> {result.compiler.summary.coveredContractFields} of {result.compiler.summary.contractFields} contract fields currently populated across {result.compiler.summary.destinationTabs} tabs ({result.compiler.summary.assignedCells} destination cells). {result.compiler.summary.reviewItems} item(s) require review.</p>}
+          {result.compiler && <p className="rr-coverage"><b>Compiler coverage:</b> {result.compiler.summary.coveredContractFields} of {result.compiler.summary.contractFields} contract fields currently populated across {result.compiler.summary.destinationTabs} tabs ({result.compiler.summary.assignedCells} destination cells). {result.compiler.summary.reviewItems} item(s) require review.</p>}
+          <div className="rr-next-step">
+            <div>
+              <span className="eyebrow">Choose the next step</span>
+              <h3>Review the conversion before any event work</h3>
+              <p>Download the updated template for offline review, or apply the reviewed values to the form below. Uploading and downloading never starts a Cvent run.</p>
+            </div>
+            <div className="rr-convert-actions">
+              <button className="secondary-button" type="button" disabled={!sourceFile || converting || result.file.type !== "xlsx"} onClick={() => void convert()}>{converting ? "Preparing workbook…" : "Download updated RR workbook"}</button>
+              {onApply && <button className="primary-small rr-apply" type="button" disabled={!result.operatorReview.canProceed} title={result.operatorReview.canProceed ? undefined : "Resolve required missing or overflow issues before applying."} onClick={() => onApply(result.normalizedSpec)}>Apply reviewed values to form</button>}
+            </div>
+          </div>
           <OperatorReviewSummary review={result.operatorReview} />
-          <p><b>Next gate:</b> apply recognized values to the EventSpec, review every field, then queue. The raw workbook can never execute directly.</p>
-          <div className="rr-convert-actions">{onApply && <button className="primary-small rr-apply" type="button" disabled={!result.operatorReview.canProceed} title={result.operatorReview.canProceed ? undefined : "Resolve required missing or overflow issues before applying."} onClick={() => onApply(result.normalizedSpec)}>Apply recognized values to EventSpec</button>}<button className="secondary-button" type="button" disabled={!sourceFile || converting || result.file.type !== "xlsx"} onClick={() => void convert()}>{converting ? "Converting…" : "Download converted new RR workbook"}</button></div>
         </div>
       )}
     </section>
