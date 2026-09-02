@@ -14,6 +14,7 @@ assert.match(bootstrap, /chmod 0640 "\$AUTH_FILE"/);
 assert.doesNotMatch(bootstrap, /chmod 600 "\$ENV_FILE" "\$AUTH_FILE"/);
 assert.match(service, /^Group=cventagent$/m);
 assert.match(service, /^SupplementaryGroups=docker$/m);
+assert.match(service, /^ExecStart=\/usr\/local\/bin\/npm start/m);
 
 // npm runs as cventagent only after the reviewed checkout is safely assigned to it.
 const ownership = bootstrap.indexOf('chown -R cventagent:cventagent "$SOURCE_DIR"');

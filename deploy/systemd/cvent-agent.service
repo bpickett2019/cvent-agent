@@ -11,7 +11,7 @@ SupplementaryGroups=docker
 WorkingDirectory=/opt/cvent-agent/source/web
 Environment=NODE_ENV=production
 EnvironmentFile=/etc/cvent-agent/cvent-agent.env
-ExecStart=/usr/bin/npm start -- --hostname 127.0.0.1 --port 4320
+ExecStart=/usr/local/bin/npm start -- --hostname 127.0.0.1 --port 4320
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=90
