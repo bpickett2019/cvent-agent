@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "smoke:proxy": "NODE_ENV=development ../node_modules/.bin/tsx proxy-runtime.smoke.ts"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
