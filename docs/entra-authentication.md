@@ -49,7 +49,7 @@ EMERALDX_AUTH_BASE_URL=https://<emerald-console-hostname>
 AUTH_SECRET=<high-entropy-random-authjs-secret>
 ```
 
-`EMERALDX_AUTH_BASE_URL` must be HTTPS in production and must not include a path. Generate `AUTH_SECRET` with a cryptographically secure secret generator (for example, `openssl rand -base64 32`).
+`EMERALDX_AUTH_BASE_URL` must be HTTPS in production except for OAuth's exact loopback exception (`http://localhost`, `http://127.0.0.1`, or `http://[::1]`) used through a private SSH tunnel, and must not include a path. Generate `AUTH_SECRET` with a cryptographically secure secret generator (for example, `openssl rand -base64 32`).
 
 For authenticated local OIDC development, use `EMERALDX_AUTH_BASE_URL=http://localhost:3000`. The legacy local-only bypass remains available only when all conditions are true: the process is not production, `EMERALDX_ALLOW_UNAUTHENTICATED_DEV=true`, and `EMERALDX_AUTH_BASE_URL` is unset or uses exactly `localhost`, `127.0.0.1`, or `::1`. Production always ignores the bypass and fails closed.
 

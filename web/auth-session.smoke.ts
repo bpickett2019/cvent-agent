@@ -20,6 +20,24 @@ assert.throws(
   "production Entra configuration must fail closed when environment is incomplete",
 );
 
+const productionLoopback = entraEnvironment({
+  NODE_ENV: "production",
+  EMERALDX_ENTRA_TENANT_ID: "661c8d9b-e19e-4330-b412-75dce2d26154",
+  EMERALDX_ENTRA_CLIENT_ID: "11f91043-4128-4b76-a405-46e71e034fab",
+  EMERALDX_ENTRA_CLIENT_SECRET: "opaque-test-value",
+  EMERALDX_AUTH_BASE_URL: "http://localhost:4320",
+  AUTH_SECRET: "opaque-test-auth-secret",
+});
+assert.equal(productionLoopback.baseUrl, "http://localhost:4320", "production may use OAuth's loopback HTTP exception through an SSH tunnel");
+assert.throws(() => entraEnvironment({
+  NODE_ENV: "production",
+  EMERALDX_ENTRA_TENANT_ID: productionLoopback.tenantId,
+  EMERALDX_ENTRA_CLIENT_ID: productionLoopback.clientId,
+  EMERALDX_ENTRA_CLIENT_SECRET: productionLoopback.clientSecret,
+  EMERALDX_AUTH_BASE_URL: "http://staging.example",
+  AUTH_SECRET: productionLoopback.authSecret,
+}), /HTTPS/i, "non-loopback production origins must require HTTPS");
+
 assert.deepEqual(
   extractEmeraldRoles({ roles: ["Operator", "Global Administrator", "Operator", 42] }),
   ["Operator"],

@@ -20,8 +20,9 @@ export function entraEnvironment(environment: NodeJS.ProcessEnv = process.env): 
   if (missing.length > 0) throw new Error(`Missing required Entra environment: ${missing.join(", ")}`);
 
   const baseUrl = new URL(values.EMERALDX_AUTH_BASE_URL!);
-  if (environment.NODE_ENV === "production" && baseUrl.protocol !== "https:") {
-    throw new Error("EMERALDX_AUTH_BASE_URL must use HTTPS in production");
+  const loopback = baseUrl.hostname === "localhost" || baseUrl.hostname === "127.0.0.1" || baseUrl.hostname === "[::1]" || baseUrl.hostname === "::1";
+  if (environment.NODE_ENV === "production" && baseUrl.protocol !== "https:" && !(baseUrl.protocol === "http:" && loopback)) {
+    throw new Error("EMERALDX_AUTH_BASE_URL must use HTTPS in production except for an exact OAuth loopback origin");
   }
   return {
     tenantId: values.EMERALDX_ENTRA_TENANT_ID!,
