@@ -19,6 +19,7 @@ const authoritative: QuestionCell[][] = [
 const compiled = compileQuestionSemantics({ sheetName: "9. Questions", rows: authoritative });
 assert.equal(compiled.length, 1, "the first real authoritative question is Excel row 8");
 assert.equal(compiled[0].sourceRow, 8);
+assert.equal(compiled[0].questionText, "What is your role?");
 assert.deepEqual(compiled[0].answers, [
   { code: "A01", text: "Architect" },
   { code: "A02", text: "Designer" },
@@ -49,6 +50,7 @@ const legacy = compileQuestionSemantics({
 });
 assert.equal(legacy.length, 1);
 assert.equal(legacy[0].sourceRow, 2);
+assert.equal(legacy[0].questionText, "What is your role?");
 assert.deepEqual(legacy[0].answers, [
   { code: "A01", text: "Architect" },
   { code: "A02", text: "Designer" },

@@ -21,6 +21,7 @@ export interface QuestionTrigger {
 export interface CompiledQuestionSemantics {
   sourceRow: number;
   internalName: string;
+  questionText: string;
   answers: QuestionAnswerOption[];
   visibility: QuestionVisibility;
   determinesRegistrationType: string | null;
@@ -54,13 +55,14 @@ export function compileQuestionSemantics(input: CompileQuestionSemanticsInput): 
 }
 
 function compileAuthoritative(rows: QuestionCell[][]): CompiledQuestionSemantics[] {
-  // Rows 1–7 are title, guidance, headers, defaults, and a worked example.
+  // Rows 1–7 are title, guidance, headers, defaults, and the reserved example row.
   return rows.slice(7).flatMap((row, offset) => {
     const internalName = at(row, 0);
-    if (!internalName) return [];
+    if (!internalName || isInstructional(internalName)) return [];
     return [{
       sourceRow: offset + 8,
       internalName,
+      questionText: at(row, 3) || internalName,
       answers: parseAnswerOptions(at(row, 5)),
       visibility: normalizeQuestionVisibility(row[7], row[8]),
       determinesRegistrationType: nullable(at(row, 9)),
@@ -89,6 +91,7 @@ function compileLegacy(rows: QuestionCell[][]): CompiledQuestionSemantics[] {
       current = {
         sourceRow: index + 1,
         internalName,
+        questionText,
         answers: [],
         visibility: normalizeQuestionVisibility(row[visibilityColumn]),
         determinesRegistrationType: null,
@@ -135,4 +138,8 @@ function value(source: QuestionCell): string {
   if (source === null || source === undefined) return "";
   if (source instanceof Date) return source.toISOString();
   return String(source).trim();
+}
+
+function isInstructional(value: string): boolean {
+  return /^(?:default:|column notes|->)|\|\s*(?:needs confirmation|confirmed|gap)/i.test(value.trim());
 }

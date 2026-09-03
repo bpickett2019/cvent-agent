@@ -78,16 +78,20 @@ export async function verify(
 
   /* ------------------------------------------------------------ registration */
 
-  const [items, paths, registrationTypes, questions] = await Promise.all([
+  const [rawItems, paths, registrationTypes, questions] = await Promise.all([
     api.listAdmissionItems(eventId),
     api.listRegistrationPaths(eventId),
     api.listRegistrationTypes(eventId),
     api.listQuestions(eventId),
   ]);
+  const admissionItemsEventScoped = rawItems.length <= 250;
+  const items = admissionItemsEventScoped ? rawItems : [];
+  if (!admissionItemsEventScoped) add({ severity: "warning", area: "registration", message: "The admission-item API filter returned an account-wide collection, so those rows were excluded from event verification; use guarded Cvent UI read-back instead." });
   let vouchers: Awaited<ReturnType<CventApi["listVouchers"]>> = [];
-  let voucherReadAvailable = true;
-  try {
+  let voucherReadAvailable = spec.registration.vouchers.length === 0;
+  if (spec.registration.vouchers.length > 0) try {
     vouchers = await api.listVouchers(eventId);
+    voucherReadAvailable = true;
   } catch (error) {
     voucherReadAvailable = false;
     add({

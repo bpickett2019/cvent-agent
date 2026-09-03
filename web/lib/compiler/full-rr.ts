@@ -82,12 +82,13 @@ function footerInputs(sheet: FullRRSheet): FooterLinkSourceRow[] {
 }
 function pathInputs(sheet: FullRRSheet): RegistrationPathSourceRow[] {
   const headerIndex = sheet.rows.findIndex((row) => row.some((cell) => /path name/i.test(text(cell)))); if (headerIndex < 0) return [];
-  return sheet.rows.slice(Math.max(headerIndex + 1, 7)).map((row) => ({ name: text(row[0]), privacy: text(row[1]), status: text(row[2]), redirectUrl: text(row[3]) })).filter((row) => row.name && !/^default:/i.test(row.name));
+  return sheet.rows.slice(Math.max(headerIndex + 2, 6)).map((row) => ({ name: text(row[0]), privacy: text(row[1]), status: text(row[2]), redirectUrl: text(row[3]) })).filter((row) => row.name && !isInstructionalRow(row.name));
 }
 function findSheet(sheets: FullRRSheet[], name: string): FullRRSheet | undefined { return sheets.find((sheet) => normalize(sheet.name) === normalize(name)); }
 function eventAnswer(value: FullRRCell | undefined): string | number | Date | null | undefined { return typeof value === "boolean" ? String(value) : value; }
 function text(value: FullRRCell | undefined): string { return value == null ? "" : value instanceof Date ? value.toISOString() : String(value).trim(); }
 function normalize(value: string): string { return value.toLowerCase().replace(/\s+/g, " ").trim(); }
+function isInstructionalRow(value: string): boolean { return /^(?:default:|column notes|->)|\|\s*(?:needs confirmation|confirmed|gap)/i.test(value.trim()); }
 function columnName(index: number): string { let out = ""; for (let value = index; value > 0; value = Math.floor((value - 1) / 26)) out = String.fromCharCode(65 + ((value - 1) % 26)) + out; return out; }
 function dedupeAssignments(values: FullRRAssignment[]): FullRRAssignment[] { const map = new Map<string, FullRRAssignment>(); values.forEach((item) => map.set(`${item.sheet}!${item.cell}`, item)); return [...map.values()]; }
 function countCoveredContractFields(values: FullRRAssignment[]): number { const keys = new Set<string>(); for (const item of values) { const match = /^([A-Z]+)(\d+)$/.exec(item.cell); if (!match) continue; if (["4. Reg Types", "5. Admission Items", "6. Pricing", "7. Discounts", "8. Vouchers", "9. Questions"].includes(item.sheet)) keys.add(`${item.sheet}:${match[1]}`); else if (item.sheet === "2. Footer Links") keys.add(`${item.sheet}:${match[2]}`); else if (item.sheet === "3. Reg Paths") keys.add(`${item.sheet}:${match[1]}`); else keys.add(`${item.sheet}:${item.cell}`); } return keys.size; }

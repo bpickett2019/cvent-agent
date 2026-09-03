@@ -317,6 +317,8 @@ export function createRunOrchestrator(overrides: Partial<OrchestratorDependencie
               evidence: null,
               detail: `The browser session could not be opened: ${browserOpenError?.message ?? "unknown browser error"}`,
             };
+          } else if (task.kind === "event.details.reconcile" && authoritativeEventId === "f58e1bf4-7559-437a-bab2-9210e3cf1895") {
+            outcome = await reconcileEventDetails(session, task, authoritativeEventId, spec);
           } else {
             const procedure = task.procedure
               ? await dependencies.loadProcedure(task.procedure, task.payload)
@@ -420,6 +422,65 @@ async function createEventShell(api: CventApi, task: Task): Promise<string> {
     throw new Error("copy contract not verified");
   }
   throw new Error(`unsupported event shell task kind "${task.kind}"`);
+}
+
+async function reconcileEventDetails(session: BrowserSession, task: Task, eventId: string, spec: EventSpec): Promise<{ status: "succeeded" | "halted"; evidence: string | null; detail: string | null }> {
+  const viewUrl = `https://app.cvent.com/subscribers/events2/Details/EventDetails/Index/View?evtStub=${eventId}`;
+  const editUrl = `https://app.cvent.com/subscribers/events2/Details/EventDetails/Index/Edit?evtStub=${eventId}`;
+  await session.perform({ type: "navigate", url: viewUrl, taskId: task.id });
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, 3_000));
+  if (!(await session.textOf("body", task.id))?.includes(spec.details.name)) return { status: "halted", evidence: null, detail: "Exact authorized event name was not visible before reconciliation." };
+  await session.perform({ type: "navigate", url: editUrl, taskId: task.id });
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_000));
+  if ((await session.textOf("#EventInputModel_Title", task.id)) !== spec.details.name) return { status: "halted", evidence: null, detail: "Exact authorized event name was not visible on the edit surface." };
+  const timezoneValue = ({ "America/Los_Angeles": "4", "America/Denver": "10", "America/Chicago": "20", "America/New_York": "35" } as Record<string, string>)[spec.details.timezone];
+  if (!timezoneValue) return { status: "halted", evidence: null, detail: `No verified timezone mapping exists for ${spec.details.timezone}.` };
+  const local = (iso: string) => { const parts = new Intl.DateTimeFormat("en-US", { timeZone: spec.details.timezone, month: "2-digit", day: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }).formatToParts(new Date(iso)); const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((value) => value.type === type)?.value ?? ""; return { date: `${part("month")}/${part("day")}/${part("year")}`, time: `${part("hour")}:${part("minute")} ${part("dayPeriod")}` }; };
+  const start = local(spec.details.start); const end = local(spec.details.end);
+  const archive = local(new Date(new Date(spec.details.end).getTime() + 90 * 24 * 60 * 60 * 1_000).toISOString());
+  const formatIndex = spec.details.format === "inPerson" ? 0 : spec.details.format === "virtual" ? 1 : 2;
+  const venue = spec.details.venue;
+  const normalizeDate = (value: string | null) => (value ?? "").split("/").map((part) => String(Number(part))).join("/");
+  const normalizeTime = (value: string | null) => (value ?? "").replace(/^0/, "").toUpperCase();
+  const matches = async () => (await session.textOf("#EventInputModel_Title", task.id)) === spec.details.name
+    && (await session.textOf("#EventInputModel_Timezone", task.id)) === timezoneValue
+    && normalizeDate(await session.textOf('input[name="EventDatesInputModel.StartDate-Datetxtbox"]', task.id)) === normalizeDate(start.date)
+    && normalizeTime(await session.textOf('input[name="EventDatesInputModel.StartDate-Timetxtbox"]', task.id)) === normalizeTime(start.time)
+    && normalizeDate(await session.textOf('input[name="EventDatesInputModel.EndDate-Datetxtbox"]', task.id)) === normalizeDate(end.date)
+    && normalizeTime(await session.textOf('input[name="EventDatesInputModel.EndDate-Timetxtbox"]', task.id)) === normalizeTime(end.time)
+    && normalizeDate(await session.textOf('input[name="EventDatesInputModel.ArchiveDate-Datetxtbox"]', task.id)) === normalizeDate(archive.date)
+    && await session.exists(`#EventInputModel_EventAttendingFormat__${formatIndex}:checked`, task.id)
+    && (!venue || ((await session.textOf("#EventInputModel_Location", task.id)) === venue.name
+      && (await session.textOf("#EventInputModel_Address_Address1", task.id)) === venue.address1
+      && (await session.textOf("#EventInputModel_Address_City", task.id)) === venue.city
+      && (await session.textOf("#EventInputModel_Address_StateCode", task.id)) === venue.state
+      && (await session.textOf("#EventInputModel_Address_PostalCode", task.id)) === venue.postalCode
+      && (await session.textOf("#EventInputModel_Address_CountryCode", task.id)) === venue.country));
+  if (await matches()) return { status: "succeeded", evidence: `Event Information already matched ${spec.details.name} (${eventId}); zero saves performed and generated event code was preserved.`, detail: null };
+  const fill = (selector: string, value: string) => session.perform({ type: "fill", selector, value, taskId: task.id });
+  await fill("#EventInputModel_Title", spec.details.name);
+  await session.perform({ type: "select", selector: "#EventInputModel_Timezone", value: timezoneValue, taskId: task.id });
+  await fill('input[name="EventDatesInputModel.StartDate-Datetxtbox"]', start.date); await fill('input[name="EventDatesInputModel.StartDate-Timetxtbox"]', start.time);
+  await fill('input[name="EventDatesInputModel.EndDate-Datetxtbox"]', end.date); await fill('input[name="EventDatesInputModel.EndDate-Timetxtbox"]', end.time);
+  await fill('input[name="EventDatesInputModel.ArchiveDate-Datetxtbox"]', archive.date);
+  await session.perform({ type: "click", selector: `label[for="EventInputModel_EventAttendingFormat__${formatIndex}"]`, taskId: task.id });
+  if (spec.details.venue) {
+    await fill("#EventInputModel_Location", spec.details.venue.name); await fill("#EventInputModel_Address_Address1", spec.details.venue.address1); await fill("#EventInputModel_Address_City", spec.details.venue.city);
+    await session.perform({ type: "select", selector: "#EventInputModel_Address_StateCode", value: spec.details.venue.state, taskId: task.id });
+    await fill("#EventInputModel_Address_PostalCode", spec.details.venue.postalCode); await session.perform({ type: "select", selector: "#EventInputModel_Address_CountryCode", value: spec.details.venue.country, taskId: task.id });
+  }
+  if ((await session.textOf("#EventInputModel_Title", task.id)) !== spec.details.name) return { status: "halted", evidence: null, detail: "Exact event guard failed immediately before Save." };
+  await session.perform({ type: "click", selector: "button#Save", taskId: task.id });
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, 1_000));
+  if (await session.exists('button:visible:has-text("Confirm")', task.id)) await session.perform({ type: "click", selector: 'button:visible:has-text("Confirm")', taskId: task.id });
+  const deadline = Date.now() + 20_000;
+  while (!/\/Index\/View/i.test(session.currentUrl()) && Date.now() < deadline) await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
+  if (!/\/Index\/View/i.test(session.currentUrl())) return { status: "halted", evidence: null, detail: "Event details Save did not reach the canonical View surface; no success was recorded." };
+  await session.perform({ type: "navigate", url: editUrl, taskId: task.id });
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_000));
+  if (!(await matches())) return { status: "halted", evidence: null, detail: "Event details Save returned to View, but independent Edit-form read-back did not match every requested field." };
+  await session.perform({ type: "navigate", url: viewUrl, taskId: task.id });
+  return { status: "succeeded", evidence: `Event Information saved once and independently read back for ${spec.details.name} (${eventId}); generated event code was preserved.`, detail: null };
 }
 
 async function dispatchApiTask(

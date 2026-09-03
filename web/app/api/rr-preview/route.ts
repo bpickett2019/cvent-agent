@@ -44,6 +44,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     const compiler = compileFullRR(sheets);
     const operatorReview = buildOperatorReview(compiler);
     const normalizedSpec = compileFullRRToEventSpec(initialSpec, compiler);
+    if (preview.event.name && normalizedSpec.details.name === initialSpec.details.name) {
+      normalizedSpec.details.name = preview.event.name;
+      delete normalizedSpec.details.code;
+    }
     return NextResponse.json({
       file: { name: safeName(file.name), size: file.size, type: lowerName.endsWith(".csv") ? "csv" : "xlsx" },
       preview,

@@ -151,7 +151,7 @@ function parseBoolean(source: string): boolean | undefined {
 function codes(source: string): string[] {
   return [...new Set(source.split(/[;,|\n]+/).map((item) => item.trim().toUpperCase()).filter(Boolean))];
 }
-function isInstruction(source: string): boolean { return /^(default:|column notes|->)/i.test(source.trim()); }
+function isInstruction(source: string): boolean { return /^(?:default:|column notes|->)|\|\s*(?:needs confirmation|confirmed|gap)/i.test(source.trim()); }
 function optional(source: string): string | undefined { return source || undefined; }
 function normalize(source: string): string { return source.trim().toLowerCase().replace(/\s+/g, " "); }
 function text(value: CompilerCell): string { return value == null ? "" : value instanceof Date ? value.toISOString() : String(value); }

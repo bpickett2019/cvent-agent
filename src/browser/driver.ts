@@ -274,9 +274,8 @@ export class BrowserSession {
 
   async textOf(selector: string, taskId: string): Promise<string | null> {
     await this.perform({ type: "read", selector, taskId });
-    // `innerText` excludes hidden scripts/templates and reflects what an
-    // operator can actually see, which is the correct read surface for Pi.
-    return this.page.locator(selector).first().innerText();
+    const locator = this.page.locator(selector).first();
+    return locator.evaluate((element) => element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement ? element.value : (element as HTMLElement).innerText);
   }
 
   async screenshot(): Promise<Buffer> {

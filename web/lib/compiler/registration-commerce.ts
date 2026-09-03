@@ -46,7 +46,7 @@ function registrationRows(source: RRSheet, modern: boolean): CompiledRegistratio
   for (const row of source.rows.slice(table.index + 1)) {
     const code = get(row, c.find(/reg.*code|new reg code/));
     const name = get(row, c.find(/new reg type name|reg type name/));
-    if (!code || !name || /^example$/i.test(code)) continue;
+    if (!code || !name || /^example$/i.test(code) || isInstructional(code) || isInstructional(name)) continue;
     const src = `${source.name} > row ${source.rows.indexOf(row) + 1}`;
     const exact = (value: unknown, field: string): FieldEvidence<unknown> => ({ value, confidence: "exact", source: `${src} > ${field}` });
     const review = (value: unknown, field: string): FieldEvidence<unknown> => ({ value, confidence: "review", source: value === "" || value === null ? `default (${field})` : `${src} > ${field}` });
@@ -77,7 +77,7 @@ function admissionRows(source: RRSheet, modern: boolean): CompiledAdmissionItem[
   for (const row of source.rows.slice(table.index + 1)) {
     const name = get(row, c.find(/^name$|admission item|item name/));
     const code = get(row, c.find(/admission code|item code|^code$/));
-    if (!name || !code || /^example$/i.test(code)) continue;
+    if (!name || !code || /^example$/i.test(code) || isInstructional(code) || isInstructional(name)) continue;
     const src = `${source.name} > row ${source.rows.indexOf(row) + 1}`;
     const evidence = (value: unknown, field: string, confidence: Confidence): FieldEvidence<unknown> => ({ value, confidence, source: `${src} > ${field}` });
     const description = get(row, c.find(/description/));
@@ -133,7 +133,7 @@ function assignmentsFor(regs: CompiledRegistrationType[], items: CompiledAdmissi
 }
 
 function sheet(sheets: RRSheet[], name: string): RRSheet | undefined { return sheets.find((s) => norm(s.name) === norm(name)); }
-function findHeader(source: RRSheet, ...requirements: RegExp[][]): { index: number; header: string[] } | undefined { for (let i=0;i<source.rows.length;i++) { const h=source.rows[i].map(text); if (requirements.every((group) => group.some((re) => h.some((v) => re.test(norm(v)))))) return { index:i, header:h }; } return undefined; }
+function findHeader(source: RRSheet, ...requirements: RegExp[][]): { index: number; header: string[] } | undefined { for (let i=0;i<source.rows.length;i++) { const h=source.rows[i].map(text); const searchable=h.filter((value)=>!/^\s*->/.test(value)); if (requirements.every((group) => group.some((re) => searchable.some((v) => re.test(norm(v)))))) return { index:i, header:h }; } return undefined; }
 function columns(header: string[]) { return { find(pattern: RegExp) { return header.findIndex((value) => pattern.test(norm(value))); } }; }
 function get(row: RRCell[], index: number): string { return index < 0 ? "" : text(row[index]).trim(); }
 function text(value: RRCell | undefined): string { if (value === null || value === undefined) return ""; if (value instanceof Date) return value.toISOString(); return String(value); }
@@ -141,4 +141,5 @@ function norm(value: string): string { return value.toLowerCase().replace(/[_–
 function list(value: string): string[] { return value.split(/[,;\n]+/).map((v) => v.trim()).filter(Boolean); }
 function bool(value: string, fallback: boolean): boolean { if (/^(?:yes|y|true|active|activate|1)$/i.test(value.trim())) return true; if (/^(?:no|n|false|inactive|not needed|0)$/i.test(value.trim())) return false; return fallback; }
 function number(value: string): number | null { if (!value.trim()) return null; const parsed = Number(value.replace(/[$,%\s,]/g, "")); return Number.isFinite(parsed) ? parsed : null; }
+function isInstructional(value: string): boolean { return /^(?:default:|column notes|->)|\|\s*(?:needs confirmation|confirmed|gap)/i.test(value.trim()); }
 function dedupe<T>(values: T[], key: (value: T) => string): T[] { const seen = new Set<string>(); return values.filter((v) => { const k=norm(key(v)); if (!k || seen.has(k)) return false; seen.add(k); return true; }); }
