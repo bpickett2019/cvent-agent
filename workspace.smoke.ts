@@ -89,6 +89,9 @@ try {
   assert.equal(released?.providerSessionId, null);
   const replacement = await manager.create({ name: "site worker", jobId: "job-b", eventId: eventA, access: "mutation" });
   assert.equal(replacement.status, "ready");
+  const reused = await manager.claimReusable({ name: "next run", jobId: "job-c", authScopeId: replacement.authScopeId, eventId: eventA, access: "mutation" });
+  assert.equal(reused?.id, replacement.id);
+  assert.equal(reused?.ownerJobId, "job-c");
 
   assert.equal((await manager.get(replacement.id))?.viewerUrl?.includes("/v1/sessions/debug"), true);
   const reaper = new FileSteelWorkspaceManager(root, runtime, () => new Date("2026-09-01T16:30:00.000Z"));

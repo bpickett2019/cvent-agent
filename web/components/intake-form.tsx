@@ -46,6 +46,7 @@ export function IntakeForm({ seed, onQueued }: IntakeFormProps) {
   const [targetMode, setTargetMode] = useState<"existingEvent" | "copyTemplate">(seed.target?.mode ?? "existingEvent");
   const [rrApplied, setRrApplied] = useState(false);
   const submissionKey = useRef(crypto.randomUUID());
+  const authScopeId = useRef(crypto.randomUUID());
   const validation = useMemo(() => EventSpecSchema.safeParse(spec), [spec]);
   const issues = validation.success ? [] : validation.error.issues;
   const authorizationError = validation.success ? authorizedExecutionError(validation.data) : null;
@@ -73,6 +74,7 @@ export function IntakeForm({ seed, onQueued }: IntakeFormProps) {
         headers: { "content-type": "application/json", "idempotency-key": submissionKey.current },
         body: JSON.stringify({
           spec: validation.data,
+          authScopeId: authScopeId.current,
           operator: { id: "demo-operator", email: "demo-operator@example.invalid" },
         }),
       });

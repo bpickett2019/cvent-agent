@@ -49,6 +49,8 @@ export interface SteelConfig {
   interactive?: boolean;
   /** Exact authorized page opened before the first agent action. */
   initialUrl?: string;
+  /** Attach to a still-live self-hosted Steel browser rather than creating another session. */
+  existingSessionId?: string;
 }
 
 export const STEEL_WORKER_TIMEOUT_MS = 3 * 60 * 60 * 1_000;
@@ -59,6 +61,13 @@ export class SteelProvider implements BrowserProvider {
 
   async connect() {
     const base = this.cfg.baseUrl ?? "https://api.steel.dev";
+    if (this.cfg.existingSessionId) {
+      const browser = await chromium.connectOverCDP(rebaseProviderUrl(base, base, true));
+      const context = browser.contexts()[0] ?? await browser.newContext();
+      const page = context.pages()[0] ?? await context.newPage();
+      if (this.cfg.initialUrl && page.url() !== this.cfg.initialUrl) await page.goto(this.cfg.initialUrl, { waitUntil: "domcontentloaded" });
+      return { browser, viewerUrl: `${base}/v1/sessions/debug`, providerSessionId: this.cfg.existingSessionId, release: async () => {} };
+    }
     const context = this.cfg.sessionContext;
     const groupedLocalStorage = context?.localStorage
       ? context.localStorageOrigin
@@ -101,6 +110,14 @@ export class SteelProvider implements BrowserProvider {
       const context = browser.contexts()[0] ?? await browser.newContext();
       const page = context.pages()[0] ?? await context.newPage();
       await page.goto(this.cfg.initialUrl, { waitUntil: "domcontentloaded" });
+      if (/\/Subscribers\/Login\.aspx/i.test(new URL(page.url()).pathname)) {
+        const sso = page.getByText("Log in using Single Sign-On", { exact: true });
+        if (await sso.count()) {
+          await sso.click();
+          await page.waitForURL((value) => value.hostname === "app.cvent.com" && !/login/i.test(value.pathname), { timeout: 20_000 }).catch(() => undefined);
+          if (page.url() !== this.cfg.initialUrl && new URL(page.url()).hostname === "app.cvent.com" && !/login/i.test(new URL(page.url()).pathname)) await page.goto(this.cfg.initialUrl, { waitUntil: "domcontentloaded" });
+        }
+      }
     }
     return {
       browser,
@@ -188,14 +205,14 @@ export class BrowserSession {
     trace: (s: StepTrace) => void,
     options: {
       beforeAction?: () => Promise<void>;
-      onConnected?: (details: { provider: string; viewerUrl?: string; providerSessionId?: string }) => Promise<void>;
+      onConnected?: (details: { provider: string; viewerUrl?: string; providerSessionId?: string; currentUrl: string }) => Promise<void>;
     } = {}
   ): Promise<BrowserSession> {
     const { browser, release, viewerUrl, providerSessionId } = await provider.connect();
     try {
-      await options.onConnected?.({ provider: provider.name, viewerUrl, providerSessionId });
       const context = browser.contexts()[0] ?? (await browser.newContext());
       const page = context.pages()[0] ?? (await context.newPage());
+      await options.onConnected?.({ provider: provider.name, viewerUrl, providerSessionId, currentUrl: page.url() });
       return new BrowserSession(page, guardrails, trace, release, options.beforeAction ?? (async () => {}));
     } catch (error) {
       await release().catch(() => {});
@@ -244,7 +261,12 @@ export class BrowserSession {
   private async run(a: Action): Promise<void> {
     switch (a.type) {
       case "navigate":
-        await this.page.goto(a.url!, { waitUntil: "domcontentloaded" });
+        try {
+          await this.page.goto(a.url!, { waitUntil: "domcontentloaded" });
+        } catch (error) {
+          if (!(error instanceof Error) || !error.message.includes("net::ERR_ABORTED")) throw error;
+          await this.page.goto(a.url!, { waitUntil: "domcontentloaded" });
+        }
         // Redirects are untrusted. Validate the actual destination as well as
         // the requested URL before any subsequent action can run.
         this.guardrails.check({ type: "navigate", url: this.page.url(), taskId: a.taskId });

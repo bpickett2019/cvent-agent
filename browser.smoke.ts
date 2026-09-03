@@ -3,6 +3,7 @@
 import type { Browser } from "playwright";
 import { BrowserSession, STEEL_WORKER_TIMEOUT_MS, type BrowserProvider } from "./src/browser/driver";
 import { GuardrailViolation, Guardrails } from "./src/guardrails/middleware";
+import { readFileSync } from "node:fs";
 
 const EVENT_ID = "3f2b6a10-9c4d-4e21-b8f7-0a1c2d3e4f56";
 const OTHER_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
@@ -14,17 +15,20 @@ function check(label: string, ok: boolean) {
   if (!ok) failures += 1;
 }
 check("Steel worker default timeout is three hours", STEEL_WORKER_TIMEOUT_MS === 10_800_000);
+check("Steel retries Cvent SSO from cloned identity cookies", /Log in using Single Sign-On/.test(readFileSync("src/browser/driver.ts", "utf8")));
+check("Steel can attach to a retained provider session", /existingSessionId/.test(readFileSync("src/browser/driver.ts", "utf8")));
 
 class FakeProvider implements BrowserProvider {
   readonly name = "fake";
   current = `https://app.cvent.com/events/${EVENT_ID}/designer`;
   redirectTo: string | null = null;
+  abortNextNavigation = false;
   clicks = 0;
 
   async connect(): Promise<{ browser: Browser; release: () => Promise<void> }> {
     const page = {
       url: () => this.current,
-      goto: async (url: string) => { this.current = this.redirectTo ?? url; },
+      goto: async (url: string) => { if (this.abortNextNavigation) { this.abortNextNavigation = false; throw new Error("page.goto: net::ERR_ABORTED"); } this.current = this.redirectTo ?? url; },
       screenshot: async () => Buffer.from("shot"),
       locator: () => ({
         click: async () => { this.clicks += 1; },
@@ -77,6 +81,9 @@ check("blocked drift never reaches Playwright click", provider.clicks === 0);
 provider.current = `https://app.cvent.com/events/${EVENT_ID}/designer`;
 await session.perform({ type: "click", selector: "#save", taskId: "safe" });
 check("in-bound selector action executes", provider.clicks === 1);
+provider.abortNextNavigation = true;
+await session.perform({ type: "navigate", url: `https://app.cvent.com/events/${EVENT_ID}/designer`, taskId: "abort-retry" });
+check("transient Cvent ERR_ABORTED navigation is retried once", provider.current.includes(EVENT_ID));
 await session.close();
 
 console.log(`\n${failures === 0 ? `ALL BROWSER CHECKS PASSED (${checks} checks)` : `${failures} FAILURE(S)`}\n`);

@@ -72,6 +72,18 @@ export class FileSteelWorkspaceManager {
     this.lockPath = join(root, ".lock");
   }
 
+  async claimReusable(input: CreateSteelWorkspace): Promise<SteelWorkspace | null> {
+    if (!input.authScopeId?.trim()) return null;
+    return this.withLock(async (document) => {
+      const index = document.workspaces.findIndex((workspace) => workspace.status === "ready" && workspace.authScopeId === input.authScopeId!.trim() && workspace.eventId === input.eventId.trim() && workspace.access === input.access);
+      if (index < 0) return null;
+      const at = this.now().toISOString();
+      const current = document.workspaces[index];
+      document.workspaces[index] = { ...current, name: input.name.trim(), ownerJobId: input.jobId.trim(), controller: "agent", updatedAt: at, ...(input.initialUrl ? { initialUrl: input.initialUrl } : {}), ...(input.assignment ? { assignment: input.assignment.trim() } : {}), activity: [...current.activity, { type: "workspace_reused", message: "Persistent authenticated workspace assigned to the next run", at }].slice(-200) };
+      return document.workspaces[index];
+    });
+  }
+
   async create(input: CreateSteelWorkspace): Promise<SteelWorkspace> {
     if (!input.name.trim() || !input.jobId.trim() || !input.eventId.trim()) throw new Error("workspace name, jobId, and eventId are required");
     if (input.initialUrl) { const parsed = new URL(input.initialUrl); if (parsed.hostname.endsWith("cvent.com") && !input.initialUrl.toLowerCase().includes(input.eventId.toLowerCase())) throw new Error("workspace initial Cvent URL must contain its exact event ID"); }

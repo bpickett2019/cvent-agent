@@ -20,7 +20,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (denied) return denied;
   try {
     assertSameOrigin(request);
-    const body = (await request.json()) as { spec?: unknown; operator?: unknown };
+    const body = (await request.json()) as { spec?: unknown; operator?: unknown; authScopeId?: unknown };
     const spec = EventSpec.parse(body.spec);
     assertTemplateCopyExecutionAvailable(spec);
     authorizeEventSpec(spec, await loadAuthorizationRegistry(process.env.EMERALDX_AUTHORIZATION_PATH ?? new URL("../../../../config/authorizations.json", import.meta.url).pathname));
@@ -34,7 +34,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       maxAttempts: 3,
       payload: {
         spec,
-        authScopeId: randomUUID(),
+        authScopeId: parseAuthScope(body.authScopeId),
         operator,
         requestedAt: new Date().toISOString(),
       },
@@ -71,4 +71,9 @@ function parseOperator(value: unknown): RunEventJobPayload["operator"] {
     throw new Error("operator email is invalid");
   }
   return { id: candidate.id.trim(), email: candidate.email.trim() };
+}
+
+function parseAuthScope(value: unknown): string {
+  if (typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) return value;
+  return randomUUID();
 }

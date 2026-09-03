@@ -75,7 +75,8 @@ assert.match(proxySource, /import \{ auth \}/);
 assert.match(entraAuthSource, /authorized\(\{ auth, request \}\)/);
 assert.match(entraAuthSource, /authorizeRole\(auth, "Viewer"\)/);
 assert.doesNotMatch(goldenAuthRouteSource, /store\.refreshAuthentication/, "the default Golden seed must never overwrite every document-scoped login");
-assert.match(jobsRouteSource, /authScopeId:\s*randomUUID\(\)/, "every queued RR document must receive an immutable private login scope");
+assert.match(jobsRouteSource, /parseAuthScope/, "every queued RR document must retain an immutable private login scope across its runs");
+assert.match(jobsRouteSource, /randomUUID\(\)/, "server must provide a private scope fallback");
 
 const monitor = await readFile("web/components/run-monitor.tsx", "utf8");
 const cards = await readFile("web/components/agent-workspaces.tsx", "utf8");

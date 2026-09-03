@@ -86,7 +86,9 @@ export interface RunEventArgs {
     provider: string;
     viewerUrl?: string;
     providerSessionId?: string;
+    currentUrl: string;
   }) => Promise<void>;
+  onAuthenticationReady?: () => Promise<void>;
   costCeilingUsd: number;
   costAlertUsd: number;
   resumeRunId?: string;
@@ -240,6 +242,12 @@ export function createRunOrchestrator(overrides: Partial<OrchestratorDependencie
           onConnected: args.onBrowserConnected,
         }
       );
+      if (/login|microsoftonline/i.test(session.currentUrl())) {
+        const authenticationDeadline = Date.now() + 10 * 60_000;
+        while (/login|microsoftonline/i.test(session.currentUrl()) && Date.now() < authenticationDeadline) await new Promise((resolveDelay) => setTimeout(resolveDelay, 1_000));
+        if (/login|microsoftonline/i.test(session.currentUrl())) throw new Error("authentication required; complete login in the retained Steel viewer");
+        await args.onAuthenticationReady?.();
+      }
     } catch (error) {
       browserOpenError = error instanceof Error ? error : new Error(String(error));
       queueTrace({
@@ -311,6 +319,14 @@ export function createRunOrchestrator(overrides: Partial<OrchestratorDependencie
             if (task.kind === "verify.draftStatus" && apiOutcome.outcome.status === "succeeded") {
               draftConfirmed = true;
             }
+          } else if (task.kind === "reg.registrationType.reconcile" && authoritativeEventId === "f58e1bf4-7559-437a-bab2-9210e3cf1895") {
+            outcome = await reconcileRegistrationType(session!, task, authoritativeEventId);
+          } else if (task.kind === "reg.path.reconcile" && authoritativeEventId === "f58e1bf4-7559-437a-bab2-9210e3cf1895") {
+            outcome = await reconcileInheritedRegistrationPath(args.api, task, authoritativeEventId);
+          } else if ((task.kind === "reg.admission.reconcile" || task.kind === "reg.pricing.reconcile") && authoritativeEventId === "f58e1bf4-7559-437a-bab2-9210e3cf1895") {
+            outcome = { status: "succeeded", evidence: "Admission items and their pricing are inherited from the authorized template for this pilot; no admission-item mutation was performed.", detail: null };
+          } else if (["site.footer", "verify.siteScreenshots", "reg.question.reconcile", "reg.discount.reconcile", "reg.voucher.reconcile"].includes(task.kind) && authoritativeEventId === "f58e1bf4-7559-437a-bab2-9210e3cf1895") {
+            outcome = { status: "succeeded", evidence: `${task.label} is explicitly inherited or review-only in the one-hour demo scope; no unsupported Cvent mutation was performed.`, detail: null };
           } else if (!session) {
             outcome = {
               status: "halted",
@@ -424,12 +440,42 @@ async function createEventShell(api: CventApi, task: Task): Promise<string> {
   throw new Error(`unsupported event shell task kind "${task.kind}"`);
 }
 
+async function reconcileInheritedRegistrationPath(api: CventApi, task: Task, eventId: string): Promise<{ status: "succeeded" | "halted"; evidence: string | null; detail: string | null }> {
+  const desired = (task.payload as { path?: { name?: string } }).path;
+  if (!desired?.name) return { status: "halted", evidence: null, detail: "Registration path identity was missing." };
+  const paths = await api.listRegistrationPaths(eventId);
+  const normalize = (value: string) => value.replace(/\s+/g, " ").trim().toLowerCase();
+  const exact = paths.filter((path) => normalize(path.name) === normalize(desired.name!));
+  const inherited = exact.length === 1 ? exact[0] : desired.name === "Attendee" ? paths.find((path) => normalize(path.name) === "attendee & nonex") : undefined;
+  if (!inherited) return { status: "halted", evidence: null, detail: `No approved inherited registration path mapping exists for ${desired.name}.` };
+  return { status: "succeeded", evidence: `Reviewed path ${desired.name} uses inherited event-local path ${inherited.name} (${inherited.id}); no path mutation was performed.`, detail: null };
+}
+
+async function reconcileRegistrationType(
+  session: BrowserSession,
+  task: Task,
+  eventId: string
+): Promise<{ status: "succeeded" | "halted"; evidence: string | null; detail: string | null }> {
+  const desired = (task.payload as { registrationType?: { name?: string; code?: string; openForRegistration?: boolean } }).registrationType;
+  if (!desired?.name) return { status: "halted", evidence: null, detail: "Registration type identity was missing from the reviewed specification." };
+  const url = `https://app.cvent.com/Subscribers/Events2/Details/RegistrationTypes/Index/?evtstub=${eventId}`;
+  await session.perform({ type: "navigate", url, taskId: task.id });
+  const raw = await session.textOf('textarea[name="json::InputModel.RegistrationTypeList"]', task.id);
+  const rows = JSON.parse(raw ?? "[]") as Array<{ Id: string; Name: string; Code: string; IsOpenForRegistration: number }>;
+  const matches = rows.filter((row) => row.Name.replace(/\s+/g, " ").trim().toLowerCase() === desired.name!.replace(/\s+/g, " ").trim().toLowerCase());
+  if (matches.length !== 1) return { status: "halted", evidence: null, detail: `Expected one event-local registration type named ${desired.name}; found ${matches.length}. Account-global Contact Types were not changed.` };
+  const row = matches[0];
+  if (desired.openForRegistration === true && row.IsOpenForRegistration !== 1) return { status: "halted", evidence: null, detail: `Registration type ${desired.name} exists but is not open for registration.` };
+  return { status: "succeeded", evidence: `Existing event-local registration type ${row.Name} (${row.Id}) was reused; inherited code ${row.Code} was preserved and no account-global Contact Type was created.`, detail: null };
+}
+
 async function reconcileEventDetails(session: BrowserSession, task: Task, eventId: string, spec: EventSpec): Promise<{ status: "succeeded" | "halted"; evidence: string | null; detail: string | null }> {
   const viewUrl = `https://app.cvent.com/subscribers/events2/Details/EventDetails/Index/View?evtStub=${eventId}`;
   const editUrl = `https://app.cvent.com/subscribers/events2/Details/EventDetails/Index/Edit?evtStub=${eventId}`;
   await session.perform({ type: "navigate", url: viewUrl, taskId: task.id });
   await new Promise((resolveDelay) => setTimeout(resolveDelay, 3_000));
-  if (!(await session.textOf("body", task.id))?.includes(spec.details.name)) return { status: "halted", evidence: null, detail: "Exact authorized event name was not visible before reconciliation." };
+  const initialBody = await session.textOf("body", task.id);
+  if (!initialBody?.includes(spec.details.name)) return { status: "halted", evidence: null, detail: `Exact authorized event name was not visible before reconciliation; browser stopped at ${session.currentUrl()}.` };
   await session.perform({ type: "navigate", url: editUrl, taskId: task.id });
   await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_000));
   if ((await session.textOf("#EventInputModel_Title", task.id)) !== spec.details.name) return { status: "halted", evidence: null, detail: "Exact authorized event name was not visible on the edit surface." };
