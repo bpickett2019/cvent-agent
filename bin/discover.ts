@@ -35,14 +35,20 @@ async function main(): Promise<void> {
     const context = await browser.newContext();
     const cookies = session.cookies as unknown as Parameters<BrowserContext["addCookies"]>[0];
     if (cookies.length) await context.addCookies(cookies);
-    if (session.localStorage) {
+    const capturedStorage = session.localStorage;
+    const localStorage = capturedStorage
+      ? Object.values(capturedStorage)[0] && typeof Object.values(capturedStorage)[0] === "object"
+        ? Object.values(capturedStorage as Record<string, Record<string, string>>)[0]
+        : capturedStorage as Record<string, string>
+      : undefined;
+    if (localStorage) {
       await context.addInitScript((entries: Record<string, string>) => {
         try {
           for (const [key, value] of Object.entries(entries)) window.localStorage.setItem(key, value);
         } catch {
           // Ignore browser-internal origins; Cvent origins receive the script too.
         }
-      }, session.localStorage);
+      }, localStorage);
     }
 
     const page = await context.newPage();

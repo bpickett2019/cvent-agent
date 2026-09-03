@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { hostname } from "node:os";
-import { resolve } from "node:path";
+import { chmod, mkdir, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 import { shutdownLangfuse } from "../src/agent/telemetry";
 import { AssetStore, sharePointAssetPaths } from "../src/assets/store";
 import { LocalPlaywrightProvider, SteelProvider, type BrowserProvider } from "../src/browser/driver";
@@ -17,6 +18,8 @@ import {
 import { FileRunControlStore, RunCancelledError } from "../src/run/control";
 import { FileRunStore } from "../src/run/fileStore";
 import { runEvent } from "../src/run/orchestrator";
+import { authorizeEventSpec, loadAuthorizationRegistry } from "../src/safety/authorizationRegistry";
+import { DockerSteelWorkspaceRuntime, FileSteelWorkspaceManager, scopedSessionContextPath, seedScopedSessionContext, type SteelWorkspace } from "../src/workspace/manager";
 import { loadCapturedSession, message, parseArgs, requiredEnv } from "./shared";
 
 const HELP = `Usage: npx tsx bin/worker.ts [--once] [--local] [--headed]
@@ -98,20 +101,53 @@ async function executeRun(
   jobId: string
 ): Promise<RunOutput> {
   const sharePointPaths = sharePointAssetPaths(payload.spec);
+  authorizeEventSpec(payload.spec, await loadAuthorizationRegistry());
   if (sharePointPaths.length) {
     throw new Error(
       `run has ${sharePointPaths.length} SharePoint image(s), but no Microsoft Graph resolver is configured`
     );
   }
   const assetPaths = await new AssetStore(resolve(args.values.get("asset-dir") ?? process.env.EMERALDX_ASSET_DIR ?? ".assets")).resolveSpec(payload.spec);
-  const sessionContext = await loadCapturedSession(args.values.get("session") ?? "session.json");
+  const sessionBasePath = resolve(args.values.get("session") ?? process.env.EMERALDX_SESSION_PATH ?? "session.json");
+  const sessionContextPath = await seedScopedSessionContext(sessionBasePath, payload.authScopeId);
+  const sessionContext = await loadCapturedSession(sessionContextPath);
+  const workspaceManager = !args.flags.has("local") && process.env.EMERALDX_STEEL_WORKSPACE_MODE === "containers"
+    ? new FileSteelWorkspaceManager(
+        resolve(process.env.EMERALDX_WORKSPACE_DIR ?? ".workspaces"),
+        new DockerSteelWorkspaceRuntime({
+          image: process.env.STEEL_WORKSPACE_IMAGE?.trim() || undefined,
+          sessionContextPath: (candidate) => scopedSessionContextPath(sessionBasePath, candidate.authScopeId),
+        })
+      )
+    : null;
+  let workspace: SteelWorkspace | null = null;
+  let reusedWorkspace = false;
+  if (workspaceManager) {
+    const workspaceInput = {
+      name: `Cvent mutation worker ${jobId}`,
+      jobId,
+      authScopeId: payload.authScopeId,
+      eventId: payload.spec.target!.mode === "existingEvent"
+        ? payload.spec.target!.eventId
+        : payload.spec.target!.templateEventId,
+      access: "mutation" as const,
+    };
+    workspace = await workspaceManager.claimReusable(workspaceInput);
+    reusedWorkspace = Boolean(workspace);
+    workspace ??= await workspaceManager.create(workspaceInput);
+  }
   const browserProvider: BrowserProvider = args.flags.has("local")
     ? new LocalPlaywrightProvider({ headless: !args.flags.has("headed"), sessionContext })
     : new SteelProvider({
         apiKey: requiredEnv("STEEL_API_KEY"),
-        baseUrl: process.env.STEEL_BASE_URL?.trim() || undefined,
-        sessionContext,
-      });
+        baseUrl: (workspace?.apiUrl ?? process.env.STEEL_BASE_URL?.trim()) || undefined,
+        sessionContext: reusedWorkspace ? undefined : sessionContext,
+        existingSessionId: reusedWorkspace ? workspace?.providerSessionId ?? undefined : undefined,
+        interactive: Boolean(workspace),
+        initialUrl: payload.spec.target?.mode === "existingEvent"
+          ? `https://app.cvent.com/subscribers/events2/Details/EventDetails/Index/View?evtStub=${payload.spec.target.eventId}`
+          : undefined,
+        });
   const api = new CventApi({
     clientId: requiredEnv("CVENT_CLIENT_ID"),
     clientSecret: requiredEnv("CVENT_CLIENT_SECRET"),
@@ -121,29 +157,64 @@ async function executeRun(
     process.env.EMERALDX_RUN_ID = runId;
   });
   process.env.EMERALDX_OPERATOR = payload.operator.email;
+  let connectedDetails: { viewerUrl?: string; providerSessionId?: string; currentUrl: string } | null = null;
 
-  const result = await runEvent({
-    spec: payload.spec,
-    operator: payload.operator,
-    store,
-    api,
-    browserProvider,
-    denyList: {
-      selectors: csvEnv("EMERALDX_DENY_SELECTORS"),
-      urlPatterns: csvEnv("EMERALDX_DENY_URL_PATTERNS"),
-    },
-    assetPaths,
-    executionControl: { waitUntilRunnable: () => controls.waitUntilRunnable(jobId) },
-    onBrowserConnected: (details) => controls.setBrowser(jobId, details).then(() => {}),
-    costCeilingUsd: numberEnv("EMERALDX_COST_CEILING_USD", 30),
-    costAlertUsd: numberEnv("EMERALDX_COST_ALERT_USD", 20),
-  });
-  return {
-    runId: result.runId,
-    eventId: result.eventId,
-    status: result.status,
-    triageSummary: result.triageSummary,
-  };
+  try {
+    if (workspaceManager && workspace) await workspaceManager.recordActivity(workspace.id, { type: "plan_started", message: "Agent started the authorized event plan" });
+    const result = await runEvent({
+      spec: payload.spec,
+      operator: payload.operator,
+      store,
+      api,
+      browserProvider,
+      denyList: {
+        selectors: csvEnv("EMERALDX_DENY_SELECTORS"),
+        urlPatterns: csvEnv("EMERALDX_DENY_URL_PATTERNS"),
+      },
+      assetPaths,
+      executionControl: { waitUntilRunnable: () => controls.waitUntilRunnable(jobId) },
+      onBrowserConnected: (details) => Promise.all([
+        Promise.resolve().then(() => { connectedDetails = details; }),
+        controls.setBrowser(jobId, details),
+        workspaceManager && workspace ? workspaceManager.recordActivity(workspace.id, /login|microsoftonline/i.test(details.currentUrl) ? { type: "auth_required", message: "Login required in this retained Steel workspace" } : { type: "browser_connected", message: "Steel browser connected with authenticated Cvent context" }) : Promise.resolve(),
+      ]).then(() => {}),
+      onAuthenticationReady: async () => {
+        if (!workspace?.apiUrl || !connectedDetails?.providerSessionId) throw new Error("authenticated workspace session details are unavailable");
+        await captureWorkerContext(workspace.apiUrl, connectedDetails.providerSessionId, sessionContextPath);
+        await captureWorkerContext(workspace.apiUrl, connectedDetails.providerSessionId, sessionBasePath);
+        await workspaceManager?.recordActivity(workspace.id, { type: "authentication_promoted", message: "Authenticated worker context saved for this document and future agents" });
+      },
+      costCeilingUsd: numberEnv("EMERALDX_COST_CEILING_USD", 30),
+      costAlertUsd: numberEnv("EMERALDX_COST_ALERT_USD", 20),
+    });
+    if (workspaceManager && workspace) await workspaceManager.recordActivity(workspace.id, { type: "run_finished", message: `Agent finished with status ${result.status}` });
+    return {
+      runId: result.runId,
+      eventId: result.eventId,
+      status: result.status,
+      triageSummary: result.triageSummary,
+    };
+  } catch (error) {
+    if (workspaceManager && workspace) await workspaceManager.recordActivity(workspace.id, { type: "run_failed", message: error instanceof Error ? error.message : "Agent run failed" }).catch(() => undefined);
+    throw error;
+  } finally {
+    if (workspaceManager && workspace) await workspaceManager.recordActivity(workspace.id, { type: "workspace_idle", message: "Persistent authenticated workspace is idle and ready for the next run" }).catch(() => undefined);
+  }
+}
+
+async function captureWorkerContext(apiUrl: string, providerSessionId: string, path: string): Promise<void> {
+  const detailsResponse = await fetch(`${apiUrl}/v1/sessions/${providerSessionId}/live-details`);
+  if (!detailsResponse.ok) throw new Error(`workspace authentication probe failed: ${detailsResponse.status}`);
+  const details = await detailsResponse.json() as { pages?: Array<{ url?: string }>; browserState?: { userAgent?: string } };
+  const authenticated = details.pages?.some((page) => page.url && new URL(page.url).hostname === "app.cvent.com" && !/login/i.test(new URL(page.url).pathname));
+  if (!authenticated) throw new Error("workspace did not reach an authenticated Cvent page");
+  const contextResponse = await fetch(`${apiUrl}/v1/sessions/${providerSessionId}/context`);
+  if (!contextResponse.ok) throw new Error(`workspace context capture failed: ${contextResponse.status}`);
+  const context = await contextResponse.json() as Record<string, unknown>;
+  if (details.browserState?.userAgent) context.userAgent = details.browserState.userAgent;
+  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+  await writeFile(path, `${JSON.stringify(context, null, 2)}\n`, { mode: 0o600 });
+  await chmod(path, 0o600);
 }
 
 function loadLocalEnvironment(): void {

@@ -31,9 +31,12 @@ export interface BrowserProvider {
 
 export interface CapturedBrowserContext {
   cookies: unknown[];
-  /** Flat storage captured from one explicitly recorded origin. */
-  localStorage?: Record<string, string>;
+  /** Legacy flat storage or Steel's complete origin-grouped storage. */
+  localStorage?: Record<string, string> | Record<string, Record<string, string>>;
   localStorageOrigin?: string;
+  sessionStorage?: Record<string, Record<string, string>>;
+  indexedDB?: Record<string, unknown[]>;
+  userAgent?: string;
 }
 
 export interface SteelConfig {
@@ -42,7 +45,15 @@ export interface SteelConfig {
   /** Operator's captured Cvent session, replayed into the hosted browser. */
   sessionContext?: CapturedBrowserContext;
   timeoutMs?: number;
+  /** Enables attended input after the run is cooperatively paused for takeover. */
+  interactive?: boolean;
+  /** Exact authorized page opened before the first agent action. */
+  initialUrl?: string;
+  /** Attach to a still-live self-hosted Steel browser rather than creating another session. */
+  existingSessionId?: string;
 }
+
+export const STEEL_WORKER_TIMEOUT_MS = 3 * 60 * 60 * 1_000;
 
 export class SteelProvider implements BrowserProvider {
   readonly name = "steel";
@@ -50,28 +61,37 @@ export class SteelProvider implements BrowserProvider {
 
   async connect() {
     const base = this.cfg.baseUrl ?? "https://api.steel.dev";
-    const context = this.cfg.sessionContext;
-    if (context?.localStorage && !context.localStorageOrigin) {
-      throw new Error("Steel session replay requires the captured localStorage origin");
+    if (this.cfg.existingSessionId) {
+      const browser = await chromium.connectOverCDP(rebaseProviderUrl(base, base, true));
+      const context = browser.contexts()[0] ?? await browser.newContext();
+      const page = context.pages()[0] ?? await context.newPage();
+      if (this.cfg.initialUrl && page.url() !== this.cfg.initialUrl) await page.goto(this.cfg.initialUrl, { waitUntil: "domcontentloaded" });
+      return { browser, viewerUrl: `${base}/v1/sessions/debug`, providerSessionId: this.cfg.existingSessionId, release: async () => {} };
     }
+    const context = this.cfg.sessionContext;
+    const groupedLocalStorage = context?.localStorage
+      ? context.localStorageOrigin
+        ? { [context.localStorageOrigin]: context.localStorage as Record<string, string> }
+        : context.localStorage as Record<string, Record<string, string>>
+      : undefined;
     const res = await fetch(`${base}/v1/sessions`, {
       method: "POST",
       headers: { "steel-api-key": this.cfg.apiKey, "content-type": "application/json" },
       body: JSON.stringify({
-        // Pause is enforced by our action gate. Viewer interaction is disabled
-        // so a human cannot bypass guardrails by clicking inside Steel.
-        debugConfig: { interactive: false, systemCursor: false },
+        // Container workspaces permit attended input only through the operator
+        // takeover flow, which pauses the cooperative action gate first.
+        debugConfig: { interactive: this.cfg.interactive ?? false, systemCursor: this.cfg.interactive ?? false },
         sessionContext: context
           ? {
               cookies: context.cookies,
               // Steel's API requires storage grouped by origin. Local capture
               // stays flat so Playwright can replay it with addInitScript.
-              ...(context.localStorage && context.localStorageOrigin
-                ? { localStorage: { [context.localStorageOrigin]: context.localStorage } }
-                : {}),
+              ...(groupedLocalStorage ? { localStorage: groupedLocalStorage } : {}),
+              ...(context.sessionStorage ? { sessionStorage: context.sessionStorage } : {}),
+              ...(context.indexedDB ? { indexedDB: context.indexedDB } : {}),
             }
           : undefined,
-        timeout: this.cfg.timeoutMs ?? 900_000,
+        timeout: this.cfg.timeoutMs ?? STEEL_WORKER_TIMEOUT_MS,
       }),
     });
     if (!res.ok) throw new Error(`steel session create failed: ${res.status} ${await res.text()}`);
@@ -82,10 +102,26 @@ export class SteelProvider implements BrowserProvider {
       debugUrl?: string;
     };
 
-    const browser = await chromium.connectOverCDP(session.websocketUrl);
+    const websocketUrl = rebaseProviderUrl(session.websocketUrl, base, true);
+    const rawViewer = this.cfg.baseUrl ? session.debugUrl ?? session.sessionViewerUrl : session.sessionViewerUrl ?? session.debugUrl;
+    const viewerUrl = rawViewer ? rebaseProviderUrl(rawViewer, base, false) : undefined;
+    const browser = await chromium.connectOverCDP(websocketUrl);
+    if (this.cfg.initialUrl) {
+      const context = browser.contexts()[0] ?? await browser.newContext();
+      const page = context.pages()[0] ?? await context.newPage();
+      await page.goto(this.cfg.initialUrl, { waitUntil: "domcontentloaded" });
+      if (/\/Subscribers\/Login\.aspx/i.test(new URL(page.url()).pathname)) {
+        const sso = page.getByText("Log in using Single Sign-On", { exact: true });
+        if (await sso.count()) {
+          await sso.click();
+          await page.waitForURL((value) => value.hostname === "app.cvent.com" && !/login/i.test(value.pathname), { timeout: 20_000 }).catch(() => undefined);
+          if (page.url() !== this.cfg.initialUrl && new URL(page.url()).hostname === "app.cvent.com" && !/login/i.test(new URL(page.url()).pathname)) await page.goto(this.cfg.initialUrl, { waitUntil: "domcontentloaded" });
+        }
+      }
+    }
     return {
       browser,
-      viewerUrl: session.sessionViewerUrl ?? session.debugUrl,
+      viewerUrl,
       providerSessionId: session.id,
       release: async () => {
         await browser.close().catch(() => {});
@@ -117,7 +153,12 @@ export class LocalPlaywrightProvider implements BrowserProvider {
         const context = await browser.newContext();
         const cookies = this.opts.sessionContext.cookies as Parameters<BrowserContext["addCookies"]>[0];
         if (cookies.length) await context.addCookies(cookies);
-        const localStorage = this.opts.sessionContext.localStorage;
+        const capturedStorage = this.opts.sessionContext.localStorage;
+        const localStorage = capturedStorage
+          ? Object.values(capturedStorage)[0] && typeof Object.values(capturedStorage)[0] === "object"
+            ? Object.values(capturedStorage as Record<string, Record<string, string>>)[0]
+            : capturedStorage as Record<string, string>
+          : undefined;
         if (localStorage) {
           await context.addInitScript((entries: Record<string, string>) => {
             try {
@@ -164,14 +205,14 @@ export class BrowserSession {
     trace: (s: StepTrace) => void,
     options: {
       beforeAction?: () => Promise<void>;
-      onConnected?: (details: { provider: string; viewerUrl?: string; providerSessionId?: string }) => Promise<void>;
+      onConnected?: (details: { provider: string; viewerUrl?: string; providerSessionId?: string; currentUrl: string }) => Promise<void>;
     } = {}
   ): Promise<BrowserSession> {
     const { browser, release, viewerUrl, providerSessionId } = await provider.connect();
     try {
-      await options.onConnected?.({ provider: provider.name, viewerUrl, providerSessionId });
       const context = browser.contexts()[0] ?? (await browser.newContext());
       const page = context.pages()[0] ?? (await context.newPage());
+      await options.onConnected?.({ provider: provider.name, viewerUrl, providerSessionId, currentUrl: page.url() });
       return new BrowserSession(page, guardrails, trace, release, options.beforeAction ?? (async () => {}));
     } catch (error) {
       await release().catch(() => {});
@@ -220,7 +261,12 @@ export class BrowserSession {
   private async run(a: Action): Promise<void> {
     switch (a.type) {
       case "navigate":
-        await this.page.goto(a.url!, { waitUntil: "domcontentloaded" });
+        try {
+          await this.page.goto(a.url!, { waitUntil: "domcontentloaded" });
+        } catch (error) {
+          if (!(error instanceof Error) || !error.message.includes("net::ERR_ABORTED")) throw error;
+          await this.page.goto(a.url!, { waitUntil: "domcontentloaded" });
+        }
         // Redirects are untrusted. Validate the actual destination as well as
         // the requested URL before any subsequent action can run.
         this.guardrails.check({ type: "navigate", url: this.page.url(), taskId: a.taskId });
@@ -250,9 +296,8 @@ export class BrowserSession {
 
   async textOf(selector: string, taskId: string): Promise<string | null> {
     await this.perform({ type: "read", selector, taskId });
-    // `innerText` excludes hidden scripts/templates and reflects what an
-    // operator can actually see, which is the correct read surface for Pi.
-    return this.page.locator(selector).first().innerText();
+    const locator = this.page.locator(selector).first();
+    return locator.evaluate((element) => element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement ? element.value : (element as HTMLElement).innerText);
   }
 
   async screenshot(): Promise<Buffer> {
@@ -267,6 +312,14 @@ export class BrowserSession {
   async close(): Promise<void> {
     await this.release();
   }
+}
+
+function rebaseProviderUrl(raw: string, base: string, websocket: boolean): string {
+  const source = new URL(raw);
+  const target = new URL(base);
+  source.protocol = websocket ? (target.protocol === "https:" ? "wss:" : "ws:") : target.protocol;
+  source.host = target.host;
+  return source.toString();
 }
 
 /** Values never land in the trail verbatim — the audit log is retained. */

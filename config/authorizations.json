@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "revision": "pilot-2026-09-01",
+  "tenants": [
+    {
+      "tenantId": "emerald-pilot",
+      "accountId": "emerald-cvent",
+      "region": "na",
+      "apiBaseUrl": "https://api-platform.cvent.com/ea",
+      "credentialRef": "cvent-emerald-pilot",
+      "enabled": true,
+      "templates": [
+        {
+          "templateEventId": "e712e34c-6117-4d13-bf4c-8ed54cf2b495",
+          "templateEventName": "(C+D) Medtrade Testing Clone 2",
+          "permissions": ["copy"],
+          "enabled": true
+        }
+      ],
+      "events": [
+        {
+          "eventId": "e712e34c-6117-4d13-bf4c-8ed54cf2b495",
+          "eventName": "(C+D) Medtrade Testing Clone 2",
+          "permissions": ["read", "configure"],
+          "enabled": true
+        },
+        {
+          "eventId": "f58e1bf4-7559-437a-bab2-9210e3cf1895",
+          "eventName": "MOCK ONLY - Medtrade CVENT Agent E2E 2027",
+          "permissions": ["read", "configure"],
+          "enabled": true
+        }
+      ]
+    }
+  ]
+}

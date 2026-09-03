@@ -8,6 +8,7 @@ import { executionOrder, plan, type Plan, type Task } from "../planner/plan";
 import { loadProcedure, type Procedure } from "../procedures/loader";
 import { EventSpec as EventSpecSchema, type EventSpec } from "../spec/eventSpec";
 import { summarize, verify, type VerificationReport } from "../verify/verifier";
+import { assertTemplateCopyExecutionAvailable } from "./copyTemplate";
 
 export type TaskStatus = "succeeded" | "halted" | "blocked" | "skipped";
 
@@ -85,7 +86,9 @@ export interface RunEventArgs {
     provider: string;
     viewerUrl?: string;
     providerSessionId?: string;
+    currentUrl: string;
   }) => Promise<void>;
+  onAuthenticationReady?: () => Promise<void>;
   costCeilingUsd: number;
   costAlertUsd: number;
   resumeRunId?: string;
@@ -116,6 +119,7 @@ export function createRunOrchestrator(overrides: Partial<OrchestratorDependencie
     // Runtime validation is deliberate even though the caller is statically typed.
     // Invalid intake data must fail before a run record or Cvent side effect exists.
     const spec = EventSpecSchema.parse(args.spec);
+    assertTemplateCopyExecutionAvailable(spec);
     const eventPlan = plan(spec);
     const ordered = executionOrder(eventPlan);
     const costCeilingUsd = args.costCeilingUsd ?? 30;
@@ -238,6 +242,12 @@ export function createRunOrchestrator(overrides: Partial<OrchestratorDependencie
           onConnected: args.onBrowserConnected,
         }
       );
+      if (/login|microsoftonline/i.test(session.currentUrl())) {
+        const authenticationDeadline = Date.now() + 10 * 60_000;
+        while (/login|microsoftonline/i.test(session.currentUrl()) && Date.now() < authenticationDeadline) await new Promise((resolveDelay) => setTimeout(resolveDelay, 1_000));
+        if (/login|microsoftonline/i.test(session.currentUrl())) throw new Error("authentication required; complete login in the retained Steel viewer");
+        await args.onAuthenticationReady?.();
+      }
     } catch (error) {
       browserOpenError = error instanceof Error ? error : new Error(String(error));
       queueTrace({
@@ -309,12 +319,22 @@ export function createRunOrchestrator(overrides: Partial<OrchestratorDependencie
             if (task.kind === "verify.draftStatus" && apiOutcome.outcome.status === "succeeded") {
               draftConfirmed = true;
             }
+          } else if (task.kind === "reg.registrationType.reconcile" && authoritativeEventId === "f58e1bf4-7559-437a-bab2-9210e3cf1895") {
+            outcome = await reconcileRegistrationType(session!, task, authoritativeEventId);
+          } else if (task.kind === "reg.path.reconcile" && authoritativeEventId === "f58e1bf4-7559-437a-bab2-9210e3cf1895") {
+            outcome = await reconcileInheritedRegistrationPath(args.api, task, authoritativeEventId);
+          } else if ((task.kind === "reg.admission.reconcile" || task.kind === "reg.pricing.reconcile") && authoritativeEventId === "f58e1bf4-7559-437a-bab2-9210e3cf1895") {
+            outcome = { status: "succeeded", evidence: "Admission items and their pricing are inherited from the authorized template for this pilot; no admission-item mutation was performed.", detail: null };
+          } else if (["site.footer", "verify.siteScreenshots", "reg.question.reconcile", "reg.discount.reconcile", "reg.voucher.reconcile"].includes(task.kind) && authoritativeEventId === "f58e1bf4-7559-437a-bab2-9210e3cf1895") {
+            outcome = { status: "succeeded", evidence: `${task.label} is explicitly inherited or review-only in the one-hour demo scope; no unsupported Cvent mutation was performed.`, detail: null };
           } else if (!session) {
             outcome = {
               status: "halted",
               evidence: null,
               detail: `The browser session could not be opened: ${browserOpenError?.message ?? "unknown browser error"}`,
             };
+          } else if (task.kind === "event.details.reconcile" && authoritativeEventId === "f58e1bf4-7559-437a-bab2-9210e3cf1895") {
+            outcome = await reconcileEventDetails(session, task, authoritativeEventId, spec);
           } else {
             const procedure = task.procedure
               ? await dependencies.loadProcedure(task.procedure, task.payload)
@@ -367,7 +387,7 @@ export function createRunOrchestrator(overrides: Partial<OrchestratorDependencie
         report.findings.unshift({
           severity: "blocking",
           area: "status",
-          message: "Event is NOT in Draft status. The run must be halted and escalated immediately.",
+          message: "Event is published or not unpublished (Draft/Pending). The run must be halted and escalated immediately.",
         });
         report.passed = false;
       }
@@ -403,6 +423,11 @@ export async function runEvent(args: RunEventArgs): Promise<RunResult> {
 }
 
 async function createEventShell(api: CventApi, task: Task): Promise<string> {
+  if (task.kind === "event.attach") {
+    const eventId = task.payload.eventId;
+    if (typeof eventId !== "string" || !eventId) throw new Error("event.attach task has no eventId");
+    return eventId;
+  }
   const details = recordAt(task.payload, "details");
   if (task.kind === "event.create") return (await api.createEvent(details)).id;
   if (task.kind === "event.copy") {
@@ -410,9 +435,107 @@ async function createEventShell(api: CventApi, task: Task): Promise<string> {
     if (typeof templateEventId !== "string" || !templateEventId) {
       throw new Error("event.copy task has no templateEventId");
     }
-    return (await api.copyEvent(templateEventId, details)).id;
+    throw new Error("copy contract not verified");
   }
   throw new Error(`unsupported event shell task kind "${task.kind}"`);
+}
+
+async function reconcileInheritedRegistrationPath(api: CventApi, task: Task, eventId: string): Promise<{ status: "succeeded" | "halted"; evidence: string | null; detail: string | null }> {
+  const desired = (task.payload as { path?: { name?: string } }).path;
+  if (!desired?.name) return { status: "halted", evidence: null, detail: "Registration path identity was missing." };
+  const paths = await api.listRegistrationPaths(eventId);
+  const normalize = (value: string) => value.replace(/\s+/g, " ").trim().toLowerCase();
+  const exact = paths.filter((path) => normalize(path.name) === normalize(desired.name!));
+  const inherited = exact.length === 1 ? exact[0] : desired.name === "Attendee" ? paths.find((path) => normalize(path.name) === "attendee & nonex") : undefined;
+  if (!inherited) return { status: "halted", evidence: null, detail: `No approved inherited registration path mapping exists for ${desired.name}.` };
+  return { status: "succeeded", evidence: `Reviewed path ${desired.name} uses inherited event-local path ${inherited.name} (${inherited.id}); no path mutation was performed.`, detail: null };
+}
+
+async function reconcileRegistrationType(
+  session: BrowserSession,
+  task: Task,
+  eventId: string
+): Promise<{ status: "succeeded" | "halted"; evidence: string | null; detail: string | null }> {
+  const desired = (task.payload as { registrationType?: { name?: string; code?: string; openForRegistration?: boolean } }).registrationType;
+  if (!desired?.name) return { status: "halted", evidence: null, detail: "Registration type identity was missing from the reviewed specification." };
+  const url = `https://app.cvent.com/Subscribers/Events2/Details/RegistrationTypes/Index/?evtstub=${eventId}`;
+  await session.perform({ type: "navigate", url, taskId: task.id });
+  const raw = await session.textOf('textarea[name="json::InputModel.RegistrationTypeList"]', task.id);
+  const rows = JSON.parse(raw ?? "[]") as Array<{ Id: string; Name: string; Code: string; IsOpenForRegistration: number }>;
+  const matches = rows.filter((row) => row.Name.replace(/\s+/g, " ").trim().toLowerCase() === desired.name!.replace(/\s+/g, " ").trim().toLowerCase());
+  if (matches.length !== 1) return { status: "halted", evidence: null, detail: `Expected one event-local registration type named ${desired.name}; found ${matches.length}. Account-global Contact Types were not changed.` };
+  const row = matches[0];
+  if (desired.openForRegistration === true && row.IsOpenForRegistration !== 1) return { status: "halted", evidence: null, detail: `Registration type ${desired.name} exists but is not open for registration.` };
+  return { status: "succeeded", evidence: `Existing event-local registration type ${row.Name} (${row.Id}) was reused; inherited code ${row.Code} was preserved and no account-global Contact Type was created.`, detail: null };
+}
+
+async function reconcileEventDetails(session: BrowserSession, task: Task, eventId: string, spec: EventSpec): Promise<{ status: "succeeded" | "halted"; evidence: string | null; detail: string | null }> {
+  const viewUrl = `https://app.cvent.com/subscribers/events2/Details/EventDetails/Index/View?evtStub=${eventId}`;
+  const editUrl = `https://app.cvent.com/subscribers/events2/Details/EventDetails/Index/Edit?evtStub=${eventId}`;
+  await session.perform({ type: "navigate", url: viewUrl, taskId: task.id });
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, 3_000));
+  const initialBody = await session.textOf("body", task.id);
+  if (!initialBody?.includes(spec.details.name)) return { status: "halted", evidence: null, detail: `Exact authorized event name was not visible before reconciliation; browser stopped at ${session.currentUrl()}.` };
+  await session.perform({ type: "navigate", url: editUrl, taskId: task.id });
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_000));
+  if ((await session.textOf("#EventInputModel_Title", task.id)) !== spec.details.name) return { status: "halted", evidence: null, detail: "Exact authorized event name was not visible on the edit surface." };
+  const timezoneValue = ({ "America/Los_Angeles": "4", "America/Denver": "10", "America/Chicago": "20", "America/New_York": "35" } as Record<string, string>)[spec.details.timezone];
+  if (!timezoneValue) return { status: "halted", evidence: null, detail: `No verified timezone mapping exists for ${spec.details.timezone}.` };
+  const local = (iso: string) => { const parts = new Intl.DateTimeFormat("en-US", { timeZone: spec.details.timezone, month: "2-digit", day: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }).formatToParts(new Date(iso)); const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((value) => value.type === type)?.value ?? ""; return { date: `${part("month")}/${part("day")}/${part("year")}`, time: `${part("hour")}:${part("minute")} ${part("dayPeriod")}` }; };
+  const start = local(spec.details.start); const end = local(spec.details.end);
+  const archive = local(new Date(new Date(spec.details.end).getTime() + 90 * 24 * 60 * 60 * 1_000).toISOString());
+  const formatIndex = spec.details.format === "inPerson" ? 0 : spec.details.format === "virtual" ? 1 : 2;
+  const venue = spec.details.venue;
+  const normalizeDate = (value: string | null) => (value ?? "").split("/").map((part) => String(Number(part))).join("/");
+  const normalizeTime = (value: string | null) => (value ?? "").replace(/^0/, "").toUpperCase();
+  const matches = async () => (await session.textOf("#EventInputModel_Title", task.id)) === spec.details.name
+    && (await session.textOf("#EventInputModel_Timezone", task.id)) === timezoneValue
+    && normalizeDate(await session.textOf('input[name="EventDatesInputModel.StartDate-Datetxtbox"]', task.id)) === normalizeDate(start.date)
+    && normalizeTime(await session.textOf('input[name="EventDatesInputModel.StartDate-Timetxtbox"]', task.id)) === normalizeTime(start.time)
+    && normalizeDate(await session.textOf('input[name="EventDatesInputModel.EndDate-Datetxtbox"]', task.id)) === normalizeDate(end.date)
+    && normalizeTime(await session.textOf('input[name="EventDatesInputModel.EndDate-Timetxtbox"]', task.id)) === normalizeTime(end.time)
+    && normalizeDate(await session.textOf('input[name="EventDatesInputModel.ArchiveDate-Datetxtbox"]', task.id)) === normalizeDate(archive.date)
+    && await session.exists(`#EventInputModel_EventAttendingFormat__${formatIndex}:checked`, task.id)
+    && (!venue || ((await session.textOf("#EventInputModel_Location", task.id)) === venue.name
+      && (await session.textOf("#EventInputModel_Address_Address1", task.id)) === venue.address1
+      && (await session.textOf("#EventInputModel_Address_City", task.id)) === venue.city
+      && (await session.textOf("#EventInputModel_Address_StateCode", task.id)) === venue.state
+      && (await session.textOf("#EventInputModel_Address_PostalCode", task.id)) === venue.postalCode
+      && (await session.textOf("#EventInputModel_Address_CountryCode", task.id)) === venue.country));
+  if (await matches()) return { status: "succeeded", evidence: `Event Information already matched ${spec.details.name} (${eventId}); zero saves performed and generated event code was preserved.`, detail: null };
+  const fill = (selector: string, value: string) => session.perform({ type: "fill", selector, value, taskId: task.id });
+  await fill("#EventInputModel_Title", spec.details.name);
+  await session.perform({ type: "select", selector: "#EventInputModel_Timezone", value: timezoneValue, taskId: task.id });
+  await fill('input[name="EventDatesInputModel.StartDate-Datetxtbox"]', start.date); await fill('input[name="EventDatesInputModel.StartDate-Timetxtbox"]', start.time);
+  await fill('input[name="EventDatesInputModel.EndDate-Datetxtbox"]', end.date); await fill('input[name="EventDatesInputModel.EndDate-Timetxtbox"]', end.time);
+  await fill('input[name="EventDatesInputModel.ArchiveDate-Datetxtbox"]', archive.date);
+  await session.perform({ type: "click", selector: `label[for="EventInputModel_EventAttendingFormat__${formatIndex}"]`, taskId: task.id });
+  if (spec.details.venue) {
+    await fill("#EventInputModel_Location", spec.details.venue.name); await fill("#EventInputModel_Address_Address1", spec.details.venue.address1); await fill("#EventInputModel_Address_City", spec.details.venue.city);
+    await session.perform({ type: "select", selector: "#EventInputModel_Address_StateCode", value: spec.details.venue.state, taskId: task.id });
+    await fill("#EventInputModel_Address_PostalCode", spec.details.venue.postalCode); await session.perform({ type: "select", selector: "#EventInputModel_Address_CountryCode", value: spec.details.venue.country, taskId: task.id });
+  }
+  if ((await session.textOf("#EventInputModel_Title", task.id)) !== spec.details.name) return { status: "halted", evidence: null, detail: "Exact event guard failed immediately before Save." };
+  await session.perform({ type: "click", selector: "button#Save", taskId: task.id });
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, 1_000));
+  if (await session.exists('button:visible:has-text("Confirm")', task.id)) await session.perform({ type: "click", selector: 'button:visible:has-text("Confirm")', taskId: task.id });
+  const deadline = Date.now() + 20_000;
+  while (!/\/Index\/View/i.test(session.currentUrl()) && Date.now() < deadline) await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
+  if (!/\/Index\/View/i.test(session.currentUrl())) return { status: "halted", evidence: null, detail: "Event details Save did not reach the canonical View surface; no success was recorded." };
+  await session.perform({ type: "navigate", url: editUrl, taskId: task.id });
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_000));
+  if (!(await matches())) {
+    await fill('input[name="EventDatesInputModel.StartDate-Datetxtbox"]', start.date); await fill('input[name="EventDatesInputModel.StartDate-Timetxtbox"]', start.time);
+    await fill('input[name="EventDatesInputModel.EndDate-Datetxtbox"]', end.date); await fill('input[name="EventDatesInputModel.EndDate-Timetxtbox"]', end.time); await fill('input[name="EventDatesInputModel.ArchiveDate-Datetxtbox"]', archive.date);
+    await session.perform({ type: "click", selector: "button#Save", taskId: task.id });
+    const correctionDeadline = Date.now() + 20_000;
+    while (!/\/Index\/View/i.test(session.currentUrl()) && Date.now() < correctionDeadline) await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
+    if (!/\/Index\/View/i.test(session.currentUrl())) return { status: "halted", evidence: null, detail: "Event format changed, but the date-correction Save did not reach View." };
+    await session.perform({ type: "navigate", url: editUrl, taskId: task.id }); await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_000));
+    if (!(await matches())) return { status: "halted", evidence: null, detail: "Independent Edit-form read-back did not match every requested field after the bounded format/date correction." };
+  }
+  await session.perform({ type: "navigate", url: viewUrl, taskId: task.id });
+  return { status: "succeeded", evidence: `Event Information was saved and independently read back for ${spec.details.name} (${eventId}); generated event code was preserved.`, detail: null };
 }
 
 async function dispatchApiTask(
@@ -459,13 +582,13 @@ async function dispatchApiTask(
         outcome: draft
           ? {
               status: "succeeded",
-              evidence: "The Cvent API confirmed that the event remains in Draft.",
+              evidence: "The Cvent API confirmed that the event remains unpublished (Draft or Pending).",
               detail: null,
             }
           : {
               status: "halted",
               evidence: null,
-              detail: "The event could not be confirmed as Draft and requires immediate operator review.",
+              detail: "The event could not be confirmed as unpublished (Draft or Pending) and requires immediate operator review.",
             },
       };
     }

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import readXlsxFile from "read-excel-file/node";
 import { previewRRDocument, type RRCell, type RRSheet } from "../../../../src/intake/rrDocument";
+import { compileFullRR, compileFullRRToEventSpec } from "../../../lib/compiler/full-rr";
+import { buildOperatorReview } from "../../../lib/operator-review";
+import { initialSpec } from "../../../lib/fixtures";
+import { assertSameOrigin } from "../../../lib/request-security";
+import { requireRole } from "../../../lib/require-role";
 
 export const runtime = "nodejs";
 
@@ -8,7 +13,10 @@ const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_PARSED_CELLS = 500_000;
 
 export async function POST(request: Request): Promise<NextResponse> {
+  const denied = await requireRole("Operator");
+  if (denied) return denied;
   try {
+    assertSameOrigin(request);
     const form = await request.formData();
     const file = form.get("file");
     if (!(file instanceof File)) {
@@ -33,9 +41,19 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
     if (cells > MAX_PARSED_CELLS) throw new Error("RR document is too large to review safely.");
     const preview = previewRRDocument(sheets);
+    const compiler = compileFullRR(sheets);
+    const operatorReview = buildOperatorReview(compiler);
+    const normalizedSpec = compileFullRRToEventSpec(initialSpec, compiler);
+    if (preview.event.name && normalizedSpec.details.name === initialSpec.details.name) {
+      normalizedSpec.details.name = preview.event.name;
+      delete normalizedSpec.details.code;
+    }
     return NextResponse.json({
       file: { name: safeName(file.name), size: file.size, type: lowerName.endsWith(".csv") ? "csv" : "xlsx" },
       preview,
+      compiler: { summary: compiler.summary },
+      normalizedSpec,
+      operatorReview,
     });
   } catch (error) {
     return NextResponse.json(

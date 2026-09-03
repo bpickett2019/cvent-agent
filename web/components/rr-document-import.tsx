@@ -1,31 +1,26 @@
 "use client";
 
 import { useRef, useState } from "react";
+import type { RRNormalizedPreview } from "../lib/rr-normalize";
+import type { EventSpec } from "../../src/spec/eventSpec";
+import type { OperatorReview } from "../lib/operator-review";
+import { OperatorReviewSummary } from "./operator-review-summary";
 
 interface RRPreviewResponse {
   file: { name: string; size: number; type: "xlsx" | "csv" };
-  preview: {
-    event: {
-      name: string | null;
-      location: string | null;
-      timezoneSource: string | null;
-      expoDatesSource: string | null;
-      conferenceDatesSource: string | null;
-      themeSource: string | null;
-    };
-    registrationTypes: Array<{ key: string; name: string; code: string }>;
-    questions: Array<{ key: string; text: string; answerType: string }>;
-    recognizedSheets: string[];
-    ignoredSheets: string[];
-    warnings: string[];
-  };
+  preview: RRNormalizedPreview;
+  normalizedSpec: EventSpec;
+  compiler?: { summary: { contractFields: number; coveredContractFields: number; destinationTabs: number; assignedCells: number; reviewItems: number } };
+  operatorReview: OperatorReview;
 }
 
-export function RRDocumentImport() {
+export function RRDocumentImport({ onApply }: { onApply?: (spec: EventSpec) => void }) {
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<RRPreviewResponse | null>(null);
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
+  const [converting, setConverting] = useState(false);
   const [error, setError] = useState("");
 
   const inspect = async (file?: File) => {
@@ -33,6 +28,7 @@ export function RRDocumentImport() {
     setLoading(true);
     setError("");
     setResult(null);
+    setSourceFile(null);
     try {
       const form = new FormData();
       form.set("file", file);
@@ -40,12 +36,27 @@ export function RRDocumentImport() {
       const body = (await response.json()) as RRPreviewResponse & { error?: string };
       if (!response.ok || !body.preview) throw new Error(body.error || "The RR document could not be read.");
       setResult(body);
+      setSourceFile(file);
     } catch (inspectError) {
       setError(inspectError instanceof Error ? inspectError.message : "The RR document could not be read.");
     } finally {
       setLoading(false);
       if (input.current) input.current.value = "";
     }
+  };
+
+  const convert = async () => {
+    if (!sourceFile) return;
+    setConverting(true); setError("");
+    try {
+      const form = new FormData(); form.set("file", sourceFile);
+      const response = await fetch("/api/rr-convert", { method: "POST", body: form });
+      if (!response.ok) { const body = await response.json() as { error?: string }; throw new Error(body.error || "Legacy RR conversion failed."); }
+      const blob = await response.blob(); const disposition = response.headers.get("content-disposition") ?? "";
+      const name = disposition.match(/filename="([^"]+)"/)?.[1] ?? "Converted_New_RR.xlsx";
+      const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Legacy RR conversion failed."); }
+    finally { setConverting(false); }
   };
 
   return (
@@ -72,11 +83,23 @@ export function RRDocumentImport() {
           <header><div><strong>{result.file.name}</strong><small>{result.file.type.toUpperCase()} · {(result.file.size / 1024).toFixed(0)} KB</small></div><span>Preview ready</span></header>
           <div className="rr-preview-grid">
             <div><small>Event</small><strong>{result.preview.event.name ?? "Needs normalization"}</strong><span>{result.preview.event.location ?? "Location not found"}</span></div>
-            <div><small>Registration types</small><strong>{result.preview.registrationTypes.length}</strong><span>recognized mappings</span></div>
-            <div><small>Questions</small><strong>{result.preview.questions.length}</strong><span>recognized definitions</span></div>
+            <div><small>Registration types</small><strong>{result.normalizedSpec.registrationTypes.length}</strong><span>compiled EventSpec mappings</span></div>
+            <div><small>Questions</small><strong>{result.normalizedSpec.questions.length}</strong><span>compiled EventSpec definitions</span></div>
             <div><small>Allowed sheets used</small><strong>{result.preview.recognizedSheets.length}</strong><span>{result.preview.ignoredSheets.length} sheets excluded</span></div>
           </div>
-          <p><b>Next gate:</b> constrained AI normalization into EventSpec, then operator review. The raw workbook can never execute directly.</p>
+          {result.compiler && <p className="rr-coverage"><b>Compiler coverage:</b> {result.compiler.summary.coveredContractFields} of {result.compiler.summary.contractFields} contract fields currently populated across {result.compiler.summary.destinationTabs} tabs ({result.compiler.summary.assignedCells} destination cells). {result.compiler.summary.reviewItems} item(s) require review.</p>}
+          <div className="rr-next-step">
+            <div>
+              <span className="eyebrow">Choose the next step</span>
+              <h3>Review the conversion before any event work</h3>
+              <p>Download the updated template for offline review, or apply the reviewed values to the form below. Uploading and downloading never starts a Cvent run.</p>
+            </div>
+            <div className="rr-convert-actions">
+              <button className="secondary-button" type="button" disabled={!sourceFile || converting || result.file.type !== "xlsx"} onClick={() => void convert()}>{converting ? "Preparing workbook…" : "Download updated RR workbook"}</button>
+              {onApply && <button className="primary-small rr-apply" type="button" disabled={!result.operatorReview.canProceed} title={result.operatorReview.canProceed ? undefined : "Resolve required missing or overflow issues before applying."} onClick={() => onApply(result.normalizedSpec)}>Apply reviewed values to form</button>}
+            </div>
+          </div>
+          <OperatorReviewSummary review={result.operatorReview} />
         </div>
       )}
     </section>

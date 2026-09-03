@@ -1,0 +1,24 @@
+[Unit]
+Description=Emerald CVENT Agent Entra callback proxy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cventagent
+Group=cventagent
+WorkingDirectory=/opt/cvent-agent/source
+ExecStart=/usr/local/bin/node --import tsx /opt/cvent-agent/source/bin/entra-callback-proxy.ts
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

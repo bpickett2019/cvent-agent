@@ -6,6 +6,9 @@ import { ReviewPage } from "./review-page";
 import { RunMonitor } from "./run-monitor";
 import { TriageQueue } from "./triage-queue";
 import { initialSpec, runs } from "../lib/fixtures";
+import { GoldenLogin } from "./golden-login";
+import { LiveRunReview } from "./live-run-review";
+import { LiveRunTriage } from "./live-run-triage";
 
 type View = "intake" | "monitor" | "review" | "triage";
 
@@ -18,6 +21,7 @@ const navigation: Array<{ id: View; label: string; description: string; icon: Re
 
 export function OperatorDashboard() {
   const [view, setView] = useState<View>("intake");
+  const [activeJobId, setActiveJobId] = useState("");
 
   return (
     <div className="dashboard-shell">
@@ -28,17 +32,17 @@ export function OperatorDashboard() {
           {navigation.map((item) => <button key={item.id} className={view === item.id ? "active" : ""} onClick={() => setView(item.id)}><span className="nav-icon">{item.icon}</span><span><strong>{item.label}</strong><small>{item.description}</small></span>{item.id === "triage" && <b className="nav-count">1</b>}</button>)}
         </nav>
         <div className="sidebar-spacer" />
-        <div className="environment-card"><span className="environment-dot" /><div><strong>Demo workspace</strong><small>Mock data · no Cvent writes</small></div></div>
+        <div className="environment-card"><span className="environment-dot" /><div><strong>Local Steel workspace</strong><small>Golden login · Pi agent core</small></div></div>
         <div className="user-card"><div className="avatar">AM</div><div><strong>Alex Morgan</strong><span>Event operations</span></div><button aria-label="User menu">•••</button></div>
       </aside>
 
       <div className="workspace">
-        <header className="topbar"><div className="breadcrumbs"><span>Event Operations</span><b>/</b><strong>{navigation.find((item) => item.id === view)?.label}</strong></div><div className="topbar-actions"><button className="icon-button" aria-label="Help">?</button><button className="icon-button notification" aria-label="Notifications"><Icon name="bell" /><span /></button></div></header>
+        <header className="topbar"><div className="breadcrumbs"><span>Event Operations</span><b>/</b><strong>{navigation.find((item) => item.id === view)?.label}</strong></div><div className="topbar-actions"><GoldenLogin /><button className="icon-button" aria-label="Help">?</button><button className="icon-button notification" aria-label="Notifications"><Icon name="bell" /><span /></button></div></header>
         <main className="workspace-main">
-          {view === "intake" && <IntakeForm seed={initialSpec} />}
-          {view === "monitor" && <RunMonitor />}
-          {view === "review" && <ReviewPage runs={runs} />}
-          {view === "triage" && <TriageQueue runs={runs} />}
+          {view === "intake" && <IntakeForm seed={initialSpec} onQueued={(jobId) => { setActiveJobId(jobId); setView("monitor"); }} />}
+          {view === "monitor" && <RunMonitor onReview={(jobId) => { setActiveJobId(jobId); setView("review"); }} />}
+          {view === "review" && activeJobId ? <LiveRunReview jobId={activeJobId} onTriage={() => setView("triage")} /> : view === "review" ? <ReviewPage runs={runs} onDecisionComplete={() => setView("triage")} /> : null}
+          {view === "triage" && activeJobId ? <LiveRunTriage jobId={activeJobId} onBack={() => setView("monitor")} /> : view === "triage" ? <TriageQueue runs={runs} /> : null}
         </main>
       </div>
     </div>

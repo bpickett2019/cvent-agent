@@ -1,13 +1,18 @@
 import { resolve } from "node:path";
 import { NextResponse } from "next/server";
 import { AssetStore } from "../../../../src/assets/store";
+import { assertSameOrigin } from "../../../lib/request-security";
+import { requireRole } from "../../../lib/require-role";
 
 export const runtime = "nodejs";
 
 const MAX_REQUEST_BYTES = 10 * 1024 * 1024;
 
 export async function POST(request: Request): Promise<NextResponse> {
+  const denied = await requireRole("Operator");
+  if (denied) return denied;
   try {
+    assertSameOrigin(request);
     const declaredLength = Number(request.headers.get("content-length") ?? 0);
     if (declaredLength > MAX_REQUEST_BYTES + 1_000_000) {
       return NextResponse.json({ error: "Image exceeds the 10 MB limit." }, { status: 413 });

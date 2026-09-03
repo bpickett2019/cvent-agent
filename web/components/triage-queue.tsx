@@ -19,6 +19,7 @@ export function TriageQueue({ runs }: { runs: DashboardRun[] }) {
         <div><span className="eyebrow">Operations</span><h1>Triage queue</h1><p>Runs that need a Cvent operator’s judgment before automation can continue.</p></div>
         <div className="queue-summary"><strong>{halted.length}</strong><span>run{halted.length === 1 ? "" : "s"} waiting</span></div>
       </header>
+      <div className="notice error-summary" role="status"><strong>Demo data</strong><span>These triage records are interface fixtures, not live Cvent worker failures.</span></div>
 
       <div className="triage-filterbar"><div><span className="pulse-dot" />Needs attention</div><span>Oldest issue first</span></div>
 

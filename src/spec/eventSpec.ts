@@ -55,7 +55,8 @@ export const EventDetails = z.object({
 /* channel: BROWSER — no API surface for the site designer.                     */
 
 export const Theme = z.object({
-  templateName: z.string().min(1),
+  /** Exact account template. Optional so a color-only path can run when missing. */
+  templateName: z.string().min(1).optional(),
   palette: z.object({
     primary: Hex,
     secondary: Hex.optional(),
@@ -89,6 +90,7 @@ export const Footer = z.object({
     })
     .default({}),
   contactEmail: z.string().email().optional(),
+  links: z.array(z.object({ key: z.string().min(1), label: z.string().min(1), destination: Url.optional(), literalDestination: z.string().optional(), enabled: z.boolean(), appliesToPaths: z.array(z.string()).default([]) })).default([]),
 });
 
 /* -------------------------------------------------------------- body widgets */
@@ -146,6 +148,16 @@ export const RegistrationType = z.object({
   key: z.string().min(1),
   name: z.string().min(1),
   description: z.string().default(""),
+  code: z.string().min(1).optional(),
+  passDescription: z.string().optional(),
+  appearsOn: z.string().optional(),
+  admissionItemKeys: z.array(z.string().min(1)).optional(),
+  pathKey: z.string().min(1).optional(),
+  openForRegistration: z.boolean().optional(),
+  autoOpensOn: z.string().optional(),
+  autoClosesOn: z.string().optional(),
+  capacity: z.number().int().nonnegative().optional(),
+  canAddGuest: z.boolean().optional(),
 });
 
 export const QuestionVisibility = z.discriminatedUnion("type", [
@@ -189,8 +201,11 @@ export const Question = z
       "fileUpload",
     ]),
     answerValues: z.array(z.string().min(1)).default([]),
+    answerOptions: z.array(z.object({ code: z.string(), text: z.string().min(1) })).optional(),
     required: z.boolean().default(false),
     visibility: QuestionVisibility,
+    determinesRegistrationTypeKey: z.string().min(1).optional(),
+    trigger: z.object({ questionKey: z.string().min(1).nullable(), answerCode: z.string().nullable(), answerText: z.string().nullable(), raw: z.string().min(1) }).optional(),
   })
   .superRefine((question, ctx) => {
     if (ChoiceAnswerTypes.has(question.answerType) && question.answerValues.length === 0) {
@@ -209,6 +224,13 @@ export const AdmissionItem = z.object({
   capacity: z.number().int().positive().optional(),
   price: z.number().nonnegative().default(0),
   currency: z.string().length(3).default("USD"),
+  registrationTypeKeys: z.array(z.string().min(1)).optional(),
+  openForRegistration: z.boolean().optional(),
+  autoOpensOn: z.string().optional(),
+  autoClosesOn: z.string().optional(),
+  chargeFee: z.boolean().optional(),
+  pricing: z.array(z.object({ name: z.string().min(1), starts: z.string().optional(), ends: z.string().optional(), memberPrice: z.number().nonnegative().nullable(), nonMemberPrice: z.number().nonnegative().nullable() })).optional(),
+  legacyPricing: z.array(z.object({ registrationTypeCode: z.string().min(1), tierName: z.string().min(1), amount: z.number().nonnegative().nullable() })).optional(),
 });
 
 export const OptionalItem = z.object({
@@ -228,6 +250,19 @@ export const Voucher = z.object({
   amount: z.number().nonnegative(),
   maxUses: z.number().int().positive().optional(),
   appliesTo: z.array(z.string()).default([]),
+  alertEmail: z.string().email().optional(),
+  description: z.string().optional(),
+  capacity: z.number().int().nonnegative().optional(),
+});
+
+export const Discount = z.object({
+  key: z.string().min(1), name: z.string().min(1), code: z.string().min(1),
+  discountType: z.enum(["percent", "fixed"]), amount: z.number().nonnegative(),
+  method: z.enum(["percent", "amount"]).optional(),
+  effectiveFrom: z.string().optional(), effectiveTo: z.string().optional(),
+  capacity: z.number().int().nonnegative().optional(), stackable: z.boolean().optional(), usableBy: z.string().optional(),
+  countGuestsTowardCapacity: z.boolean().optional(), active: z.boolean().optional(),
+  admissionItemKeys: z.array(z.string()).default([]), optionalItemKeys: z.array(z.string()).default([]),
 });
 
 export const RegistrationPath = z.object({
@@ -237,6 +272,9 @@ export const RegistrationPath = z.object({
   admissionItemKeys: z.array(z.string()).min(1),
   isDefault: z.boolean().default(false),
   requiresApproval: z.boolean().default(false),
+  privacy: z.enum(["public", "private"]).optional(),
+  status: z.enum(["active", "inactive"]).optional(),
+  redirectUrl: Url.optional(),
 });
 
 export const AdvancedRule = z.object({
@@ -251,6 +289,7 @@ export const Registration = z.object({
   admissionItems: z.array(AdmissionItem).default([]),
   optionalItems: z.array(OptionalItem).default([]),
   vouchers: z.array(Voucher).default([]),
+  discounts: z.array(Discount).optional(),
   paths: z.array(RegistrationPath).default([]),
   advancedRules: z.array(AdvancedRule).default([]),
   capacity: z.number().int().positive().optional(),
@@ -262,6 +301,31 @@ export const Registration = z.object({
 export const EventSpec = z
   .object({
     specVersion: z.literal("1.0"),
+    /** Explicit existing-event boundary. Queue/worker safety validates the authorized clone. */
+    target: z.discriminatedUnion("mode", [
+      z.object({
+        tenantId: z.string().min(1),
+        accountId: z.string().min(1),
+        eventId: z.string().uuid(),
+        eventName: z.string().min(1),
+        templateEventId: z.never().optional(),
+        templateEventName: z.never().optional(),
+        newEventName: z.never().optional(),
+        newEventCode: z.never().optional(),
+        mode: z.literal("existingEvent"),
+      }).strict(),
+      z.object({
+        tenantId: z.string().min(1),
+        accountId: z.string().min(1),
+        templateEventId: z.string().uuid(),
+        templateEventName: z.string().min(1),
+        newEventName: z.string().min(1),
+        newEventCode: z.string().min(1).optional(),
+        eventId: z.never().optional(),
+        eventName: z.never().optional(),
+        mode: z.literal("copyTemplate"),
+      }).strict(),
+    ]).optional(),
     details: EventDetails,
     /** Usually inherited from templateEventId; include only when this run must change it. */
     theme: Theme.optional(),

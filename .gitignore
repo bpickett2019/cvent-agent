@@ -35,6 +35,10 @@ logs/
 .queue/
 .assets
 .assets/
+.workspaces
+.workspaces/
+.workspaces-*/
+sessions/
 session.json
 discovered.json
 discovered/

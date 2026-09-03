@@ -1,26 +1,32 @@
 id: site/configure-header
-version: 1
-goal: >
-  Configure the website header to match the title, subtitle, visibility flags,
-  logo, and banner image supplied in the event specification.
+version: 2
+goal: Reconcile the requested header on the exact mapped Header and Footer surface with one save and read-back.
 preconditions:
-  - Event exists and is bound to the run's event id
-  - The event website designer is available
+  - Event URL evtstub equals the run event id, exact event name is visible, and title is Site Designer
+  - Top-level Save is disabled at task start
 steps:
-  - description: Open the website header editor
-    selectorHint: "TODO"
-  - description: Apply the exact header configuration {{header}}
-    selectorHint: "TODO"
-  - description: Save the header and confirm the configured values remain visible
-    selectorHint: "TODO"
+  - description: Open the mapped template surface and read current header values before writing
+    selectorHint: '[data-cvent-id="template:0a4c67cb-cd3f-4f55-8b73-2915bc0b9558"]'
+    verify: '[data-cvent-id="nucleus-site-editor-site-header"] contains exact Default Header and Footer and HEADER AND FOOTER'
+    onMiss: Halt on Summary, Registration Summary, WEBSITE PAGE, another template, or an ambiguous surface.
+  - description: Select only the exact existing header component and reconcile supported fields to {{header}}
+    selectorHint: '[data-cvent-id="page-renderer-editable-page-content"]'
+    value: '{{header}}'
+    onMiss: Halt if a requested field or asset has no exact mapped inspector control; preserve inherited and unrequested content.
+  - description: Reassert the exact surface and save the complete header reconciliation exactly once
+    selectorHint: '[data-cvent-id="site-designer-save-button"]'
+    verify: 'Default Header and Footer / HEADER AND FOOTER remains selected and Save returns to disabled'
+  - description: Reload the same event-scoped route, reopen the exact surface, and independently read back header values
+    selectorHint: '[data-cvent-id="nucleus-site-editor-site-header"]'
+    verify: 'Default Header and Footer / HEADER AND FOOTER and the supported header fields exactly equal {{header}}'
 idempotency:
-  check: "The saved header configuration exactly equals {{header}}"
+  check: 'Read back on Default Header and Footer / HEADER AND FOOTER exactly equals {{header}}; if equal, do not save.'
 failureModes:
-  - symptom: "A requested logo or banner asset cannot be resolved"
-    action: "Halt and name the missing asset; do not substitute another image."
-  - symptom: "The header changes do not persist after saving"
-    action: "Retry the save once, then halt with the values that did not persist."
+  - symptom: Event identity, clean-state, exact-surface, component identity, or asset resolution fails
+    action: Halt without changing state or substituting another component or asset.
+  - symptom: Read back differs after reload
+    action: Report FAIL with before, intended, and after values; do not retry Save.
 provenance:
-  authoredBy: human
-  validatedAgainst: null
-  lastReviewed: null
+  authoredBy: agent-proposed
+  validatedAgainst: retained-agent-6-site-designer-map
+  lastReviewed: '2026-09-01'

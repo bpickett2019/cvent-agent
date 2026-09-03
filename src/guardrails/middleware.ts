@@ -68,8 +68,13 @@ const PERMANENT = {
     "go-live",
     "golive",
     "launch-event",
+    "launch",
+    "activate",
     "delete-event",
+    "deleteevent",
     "[data-cvent-action='publish']",
+    "[data-cvent-action='activate']",
+    "[data-cvent-action='launch']",
   ],
   attendeeSelectorPatterns: [
     /(?:name|text|label|title)=['\"]?(?:attendees?|registrants?|invitees?|contacts?)/i,
@@ -81,6 +86,9 @@ const PERMANENT = {
     "/go-live",
     "/golive",
     "/launch-event",
+    "/launch",
+    "/activate",
+    "/delete-event",
     "/attendees",
     "/registrants",
     "/invitees",
@@ -139,7 +147,7 @@ export class Guardrails {
       const u = norm(action.url);
       const hit = PERMANENT.urlFragments.find((f) => u.includes(f));
       if (hit) this.deny("permanent.url", action, `navigation to prohibited area "${hit}"`);
-      if (/[?&](?:action|mode|step|view)=(?:publish|go-?live|launch)(?:[&#]|$)/i.test(u)) {
+      if (/[?&](?:action|mode|step|view)=(?:publish|go-?live|launch|activate|delete)(?:[&#]|$)/i.test(u)) {
         this.deny("permanent.url", action, "navigation targets a prohibited publish flow");
       }
     }

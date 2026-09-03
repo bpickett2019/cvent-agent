@@ -11,10 +11,12 @@
  * The read surface is doing heavy lifting: it powers verification and the
  * idempotency checks that make "retries resume from the failed step" real. It
  * is also an independent channel from the browser that performed the writes,
- * which is what makes the Draft-status post-check credible to an auditor.
+ * which is what makes the unpublished-status post-check credible to an auditor.
  *
- * NOTE: request/response shapes below are provisional. Confirm against the
- * OpenAPI spec pulled with Emerald's credentials in Week 1 before trusting.
+ * Auth (confirmed live 2026-08-27): POST {base}/oauth2/token with
+ * Authorization: Basic base64(clientId:clientSecret) and form body
+ * grant_type=client_credentials AND client_id. Token `scope` may be null;
+ * do not require it. Never add activate/publish methods.
  */
 
 const NA = "https://api-platform.cvent.com/ea";
@@ -26,7 +28,9 @@ export interface CventCredentials {
   baseUrl?: string;
 }
 
-/** Least-privilege set. Writes are deliberately narrow. */
+export type FetchLike = (input: string | URL, init?: RequestInit) => Promise<Response>;
+
+/** Least-privilege set. Writes are deliberately narrow. No contacts/attendees. */
 export const REQUIRED_SCOPES = {
   write: ["event/events:write"],
   read: [
@@ -40,6 +44,32 @@ export const REQUIRED_SCOPES = {
   ],
 } as const;
 
+/** Cvent sandbox events use Pending, not Draft, for unpublished work. */
+const UNPUBLISHED_STATUSES = new Set(["draft", "pending"]);
+/** Statuses that mean the event is live or otherwise published. Pending is not among them. */
+const PUBLISHED_STATUSES = new Set(["active", "published", "live", "launched"]);
+
+export type EventPublicationState = "unpublished" | "published" | "unknown";
+
+export function normalizeEventStatus(status?: string | null): string {
+  return (status ?? "").trim().toLowerCase();
+}
+
+export function eventPublicationState(status?: string | null): EventPublicationState {
+  const normalized = normalizeEventStatus(status);
+  if (UNPUBLISHED_STATUSES.has(normalized)) return "unpublished";
+  if (PUBLISHED_STATUSES.has(normalized)) return "published";
+  return "unknown";
+}
+
+export function isUnpublishedStatus(status?: string | null): boolean {
+  return eventPublicationState(status) === "unpublished";
+}
+
+export function isPublishedStatus(status?: string | null): boolean {
+  return eventPublicationState(status) === "published";
+}
+
 interface Token {
   value: string;
   expiresAt: number;
@@ -48,9 +78,11 @@ interface Token {
 export class CventApi {
   private token?: Token;
   private readonly base: string;
+  private readonly fetchImpl: FetchLike;
 
-  constructor(private readonly creds: CventCredentials) {
-    this.base = creds.baseUrl ?? NA;
+  constructor(private readonly creds: CventCredentials, fetchImpl: FetchLike = fetch) {
+    this.base = (creds.baseUrl ?? NA).replace(/\/+$/, "");
+    this.fetchImpl = fetchImpl;
   }
 
   /** Client credentials flow. Tokens last 60 minutes; refreshed at 55. */
@@ -58,23 +90,35 @@ export class CventApi {
     if (this.token && Date.now() < this.token.expiresAt) return this.token.value;
 
     const basic = Buffer.from(`${this.creds.clientId}:${this.creds.clientSecret}`).toString("base64");
-    const res = await fetch(`${this.base}/oauth2/token`, {
+    const res = await this.fetchImpl(`${this.base}/oauth2/token`, {
       method: "POST",
       headers: {
         authorization: `Basic ${basic}`,
         "content-type": "application/x-www-form-urlencoded",
       },
-      body: new URLSearchParams({ grant_type: "client_credentials" }),
+      // Live 2026-08-27: grant_type AND client_id are both required in the form body.
+      body: new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: this.creds.clientId,
+      }),
     });
     if (!res.ok) throw new Error(`cvent auth failed: ${res.status} ${await res.text()}`);
 
-    const body = (await res.json()) as { access_token: string; expires_in: number };
-    this.token = { value: body.access_token, expiresAt: Date.now() + (body.expires_in - 300) * 1000 };
+    const body = (await res.json()) as {
+      access_token?: string;
+      expires_in?: number;
+      token_type?: string;
+      scope?: string | null;
+    };
+    // `scope` is often null on this tenant; do not require or inspect it.
+    if (!body.access_token) throw new Error("cvent auth failed: token response missing access_token");
+    const expiresIn = typeof body.expires_in === "number" && body.expires_in > 300 ? body.expires_in : 3600;
+    this.token = { value: body.access_token, expiresAt: Date.now() + (expiresIn - 300) * 1000 };
     return this.token.value;
   }
 
   private async request<T>(path: string, init: RequestInit = {}, attempt = 0): Promise<T> {
-    const res = await fetch(`${this.base}${path}`, {
+    const res = await this.fetchImpl(`${this.base}${path}`, {
       ...init,
       headers: {
         authorization: `Bearer ${await this.auth()}`,
@@ -109,14 +153,15 @@ export class CventApi {
   /* ------------------------------------------------------------------ writes */
 
   async createEvent(input: Record<string, unknown>): Promise<{ id: string }> {
-    return this.request("/events", { method: "POST", body: JSON.stringify(input) });
+    return unwrapResource(await this.request("/events", { method: "POST", body: JSON.stringify(input) }));
   }
 
-  async copyEvent(templateEventId: string, input: Record<string, unknown>): Promise<{ id: string }> {
-    return this.request(`/events/${templateEventId}/copy`, {
-      method: "POST",
-      body: JSON.stringify(input),
-    });
+  /**
+   * Disabled legacy surface. Event copy must use the transport-injected
+   * templateCopyContract after its provisional fixture has been verified.
+   */
+  async copyEvent(_templateEventId: string, _input: Record<string, unknown>): Promise<{ id: string }> {
+    throw new Error("provisional Cvent template-copy contract is disabled on the live CventApi client");
   }
 
   async updateEvent(eventId: string, patch: Record<string, unknown>): Promise<void> {
@@ -126,7 +171,7 @@ export class CventApi {
   /* ------------------------------------------------------------------- reads */
 
   async getEvent(eventId: string): Promise<CventEvent> {
-    return this.request(`/events/${eventId}`);
+    return unwrapResource<CventEvent>(await this.request(`/events/${eventId}`));
   }
 
   async listAdmissionItems(eventId: string): Promise<CventAdmissionItem[]> {
@@ -143,7 +188,7 @@ export class CventApi {
 
   /** The question read surface does not expose conditional visibility rules. */
   async listQuestions(eventId: string): Promise<CventQuestion[]> {
-    return this.listAll(`/events/${eventId}/questions`);
+    return this.listAll(`/event-questions?eventId=${eventId}`);
   }
 
   async listFees(eventId: string): Promise<CventFee[]> {
@@ -155,13 +200,34 @@ export class CventApi {
   }
 
   /**
-   * Independent Draft-status confirmation. Deliberately read through the API
-   * rather than the browser that performed the writes.
+   * Independent unpublished-status confirmation. Deliberately read through the
+   * API rather than the browser that performed the writes. Pending is unpublished
+   * (the live Medtrade sandbox status); it is never treated as published.
    */
-  async isDraft(eventId: string): Promise<boolean> {
+  async isUnpublished(eventId: string): Promise<boolean> {
     const event = await this.getEvent(eventId);
-    return (event.status ?? "").toLowerCase() === "draft";
+    return isUnpublishedStatus(event.status);
   }
+
+  /** SOX alias: Draft *or* Pending. Never true for published/active/live. */
+  async isDraft(eventId: string): Promise<boolean> {
+    return this.isUnpublished(eventId);
+  }
+
+  async isPublished(eventId: string): Promise<boolean> {
+    const event = await this.getEvent(eventId);
+    return isPublishedStatus(event.status);
+  }
+}
+
+function unwrapResource<T>(body: unknown): T {
+  if (body && typeof body === "object" && "data" in body) {
+    const data = (body as { data: unknown }).data;
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+      return data as T;
+    }
+  }
+  return body as T;
 }
 
 /* --------------------------------------------------------- response shapes -- */
@@ -169,6 +235,7 @@ export class CventApi {
 export interface CventEvent {
   id: string;
   title?: string;
+  code?: string;
   status?: string;
   start?: string;
   end?: string;
