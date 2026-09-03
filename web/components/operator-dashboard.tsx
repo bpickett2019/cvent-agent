@@ -7,6 +7,8 @@ import { RunMonitor } from "./run-monitor";
 import { TriageQueue } from "./triage-queue";
 import { initialSpec, runs } from "../lib/fixtures";
 import { GoldenLogin } from "./golden-login";
+import { LiveRunReview } from "./live-run-review";
+import { LiveRunTriage } from "./live-run-triage";
 
 type View = "intake" | "monitor" | "review" | "triage";
 
@@ -19,6 +21,7 @@ const navigation: Array<{ id: View; label: string; description: string; icon: Re
 
 export function OperatorDashboard() {
   const [view, setView] = useState<View>("intake");
+  const [activeJobId, setActiveJobId] = useState("");
 
   return (
     <div className="dashboard-shell">
@@ -36,10 +39,10 @@ export function OperatorDashboard() {
       <div className="workspace">
         <header className="topbar"><div className="breadcrumbs"><span>Event Operations</span><b>/</b><strong>{navigation.find((item) => item.id === view)?.label}</strong></div><div className="topbar-actions"><GoldenLogin /><button className="icon-button" aria-label="Help">?</button><button className="icon-button notification" aria-label="Notifications"><Icon name="bell" /><span /></button></div></header>
         <main className="workspace-main">
-          {view === "intake" && <IntakeForm seed={initialSpec} onQueued={() => setView("monitor")} />}
-          {view === "monitor" && <RunMonitor />}
-          {view === "review" && <ReviewPage runs={runs} onDecisionComplete={() => setView("triage")} />}
-          {view === "triage" && <TriageQueue runs={runs} />}
+          {view === "intake" && <IntakeForm seed={initialSpec} onQueued={(jobId) => { setActiveJobId(jobId); setView("monitor"); }} />}
+          {view === "monitor" && <RunMonitor onReview={(jobId) => { setActiveJobId(jobId); setView("review"); }} />}
+          {view === "review" && activeJobId ? <LiveRunReview jobId={activeJobId} onTriage={() => setView("triage")} /> : view === "review" ? <ReviewPage runs={runs} onDecisionComplete={() => setView("triage")} /> : null}
+          {view === "triage" && activeJobId ? <LiveRunTriage jobId={activeJobId} onBack={() => setView("monitor")} /> : view === "triage" ? <TriageQueue runs={runs} /> : null}
         </main>
       </div>
     </div>

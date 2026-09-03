@@ -47,6 +47,7 @@ const operatorReviewSummary = await readFile("web/components/operator-review-sum
 const globalStyles = await readFile("web/app/globals.css", "utf8");
 const intakeForm = await readFile("web/components/intake-form.tsx", "utf8");
 const reviewPage = await readFile("web/components/review-page.tsx", "utf8");
+const liveRunReview = await readFile("web/components/live-run-review.tsx", "utf8");
 const triageQueue = await readFile("web/components/triage-queue.tsx", "utf8");
 assert.match(reviewPage, /Demo data/);
 assert.match(triageQueue, /Demo data/);
@@ -75,5 +76,8 @@ assert.match(intakeForm, /Upload and apply an RR workbook/);
 assert.match(intakeForm, /scrollIntoView\(\{ behavior: "smooth", block: "start" \}\)/, "green intake actions advance to the next section");
 assert.match(dashboard, /onQueued=.*setView\("monitor"\)/, "queued intake advances to agent monitor");
 assert.doesNotMatch(dashboard, /onRunComplete=.*setView\("review"\)/, "run monitor must not auto-navigate into fixture review data");
+assert.match(dashboard, /activeJobId/);
+assert.match(monitor, /Review actual run/);
+assert.match(liveRunReview, /\/api\/jobs\/\$\{jobId\}\/result/);
 assert.match(dashboard, /onDecisionComplete=.*setView\("triage"\)/, "completed review advances to triage");
 console.log("web console smoke passed");

@@ -16,7 +16,7 @@ type RegistrationPath = EventSpec["registration"]["paths"][number];
 
 interface IntakeFormProps {
   seed: EventSpec;
-  onQueued?: () => void;
+  onQueued?: (jobId: string) => void;
 }
 
 const answerTypes: Array<{ value: Question["answerType"]; label: string }> = [
@@ -80,7 +80,7 @@ export function IntakeForm({ seed, onQueued }: IntakeFormProps) {
       if (!response.ok || !body.job) throw new Error(body.error || "The run could not be queued.");
       setQueuedJobId(body.job.id);
       setSubmitted(true);
-      window.setTimeout(() => onQueued?.(), 700);
+      window.setTimeout(() => onQueued?.(body.job!.id), 700);
     } catch (error) {
       setSubmissionError(error instanceof Error ? error.message : "The run could not be queued.");
     } finally {

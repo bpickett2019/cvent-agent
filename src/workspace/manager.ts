@@ -110,7 +110,7 @@ export class FileSteelWorkspaceManager {
     const workspace = await this.get(id);
     if (!workspace) throw new Error(`unknown workspace ${id}`);
     if (workspace.status !== "released") await this.runtime.stop(workspace).catch(() => undefined);
-    return this.update(id, (current) => ({ ...current, status: "released", updatedAt: this.now().toISOString() }));
+    return this.update(id, (current) => ({ ...current, status: "released", containerId: null, providerSessionId: null, apiUrl: null, viewerUrl: null, updatedAt: this.now().toISOString() }));
   }
 
   async takeOver(id: string): Promise<SteelWorkspace> {
@@ -165,7 +165,7 @@ export class FileSteelWorkspaceManager {
     await mkdir(this.root, { recursive: true, mode: 0o700 });
     return readFile(this.statePath, "utf8").then((source) => {
       const document = JSON.parse(source) as WorkspaceDocument;
-      document.workspaces = document.workspaces.map((workspace) => ({ ...workspace, authScopeId: workspace.authScopeId || workspace.ownerJobId }));
+      document.workspaces = document.workspaces.map((workspace) => ({ ...workspace, authScopeId: workspace.authScopeId || workspace.ownerJobId, ...(workspace.status === "released" ? { containerId: null, providerSessionId: null, apiUrl: null, viewerUrl: null } : {}) }));
       return document;
     }).catch((error: NodeJS.ErrnoException) => {
       if (error.code === "ENOENT") return { workspaces: [] };

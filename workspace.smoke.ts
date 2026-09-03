@@ -82,6 +82,11 @@ try {
 
   await manager.release(first.id);
   assert.equal(stops.includes(first.id), true);
+  const released = await manager.get(first.id);
+  assert.equal(released?.status, "released");
+  assert.equal(released?.viewerUrl, null);
+  assert.equal(released?.apiUrl, null);
+  assert.equal(released?.providerSessionId, null);
   const replacement = await manager.create({ name: "site worker", jobId: "job-b", eventId: eventA, access: "mutation" });
   assert.equal(replacement.status, "ready");
 

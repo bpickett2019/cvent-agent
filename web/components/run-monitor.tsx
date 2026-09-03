@@ -20,7 +20,7 @@ interface MonitoredJob {
   };
 }
 
-export function RunMonitor() {
+export function RunMonitor({ onReview }: { onReview?: (jobId: string) => void }) {
   const [jobs, setJobs] = useState<MonitoredJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<Record<string, string>>({});
@@ -113,6 +113,7 @@ export function RunMonitor() {
                   {!terminal && !isPaused && <button className="pause-button" disabled={Boolean(pending[job.id])} onClick={() => void control(job, "pause")}>{pending[job.id] === "pause" ? "Pausing…" : "Ⅱ Pause run"}</button>}
                   {!terminal && isPaused && <button className="resume-button" disabled={Boolean(pending[job.id])} onClick={() => void control(job, "resume")}>{pending[job.id] === "resume" ? "Resuming…" : "▶ Resume run"}</button>}
                   {!terminal && <button className="cancel-run-button" disabled={Boolean(pending[job.id])} onClick={() => void control(job, "cancel")}>{pending[job.id] === "cancel" ? "Cancelling…" : "Cancel run"}</button>}
+                  {terminal && <button className="resume-button" onClick={() => onReview?.(job.id)}>Review actual run</button>}
                 </div>
               </div>
             </article>
