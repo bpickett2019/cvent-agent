@@ -9,4 +9,7 @@ const source = readFileSync("web/lib/steel-auth.ts", "utf8");
 assert.match(source, /persist:\s*true/);
 assert.match(source, /userDataDir/);
 assert.doesNotMatch(source, /persistProfile/);
+assert.match(source, /recoverMaintenance/);
+assert.match(source, /assertAuthenticatedCventUrl\(await currentCdpUrl/);
+assert.doesNotMatch(source, /status: ready \? "ready" : "missing"/, "file existence alone must not claim authentication is ready");
 console.log("golden auth guard smoke passed");

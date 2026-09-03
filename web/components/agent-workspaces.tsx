@@ -46,23 +46,25 @@ export function AgentWorkspaces({ onWatch }: { onWatch: (viewer: { url: string; 
     finally { setBusy(""); }
   };
   const active = workspaces.filter((workspace) => workspace.status === "starting" || workspace.status === "ready");
+  const recentTerminal = workspaces.filter((workspace) => workspace.status === "released" || workspace.status === "failed").slice(0, 6);
+  const displayed = [...active, ...recentTerminal];
   return <section className="workspace-browser-board">
     <header className="workspace-board-head"><div><span>ISOLATED BROWSER WORKSPACES</span><h2>Agent workspaces</h2><p>Dedicated Chromium sessions with document-scoped login contexts and independent ownership.</p></div><strong>{active.length} active · 12 per document · 36 global</strong></header>
     {error && <div className="workspace-board-error">{error}</div>}
-    {active.length === 0 && <div className="empty-row">Workspaces appear automatically when an AI agent is deployed.</div>}
+    {displayed.length === 0 && <div className="empty-row">Workspaces appear automatically when an AI agent is deployed.</div>}
     <div className="workspace-browser-grid">
-      {active.map((workspace) => {
+      {displayed.map((workspace) => {
         const latest = workspace.activity?.at(-1);
         const authRequired = latest?.type === "auth_required";
         return <article className="workspace-browser-card" key={workspace.id}>
         <div className="workspace-preview">
-          {workspace.viewerUrl ? <img src={`/api/workspaces/${workspace.id}/thumbnail?t=${previewTick}`} alt={`Live preview of ${workspace.name}`} /> : <div className="workspace-preview-loading"><span />Starting Chromium…</div>}
+          {workspace.viewerUrl ? <img src={`/api/workspaces/${workspace.id}/thumbnail?t=${previewTick}`} alt={`Live preview of ${workspace.name}`} /> : <div className="workspace-preview-loading"><span />{workspace.status === "released" ? "Workspace released; task result is retained separately" : workspace.status === "failed" ? "Workspace failed; inspect activity" : "Starting Chromium…"}</div>}
           {authRequired && <div className="workspace-preview-state auth"><strong>Login required</strong><span>Cvent redirected this runner to Client Login. The container and live viewer remain active.</span></div>}
           {!authRequired && latest && <div className="workspace-preview-state"><strong>{workspace.status === "ready" ? "Live runner" : "Starting"}</strong><span>{latest.message}</span></div>}
           <span className="workspace-preview-shield" />
         </div>
-        <div className="workspace-card-meta"><span className={`workspace-status-chip ${workspace.status}`}>{authRequired ? "Waiting for login" : workspace.status === "ready" ? "Running" : "Starting"}</span><strong title={workspace.name}>{workspace.name}</strong><span className="workspace-browser-owner">Steel Chromium</span></div>
-        <div className="workspace-card-footer"><span>{workspace.access === "mutation" ? "Mutation lease" : "Read-only"} · {workspace.id.slice(0, 8)}</span><div><button onClick={() => workspace.viewerUrl && onWatch({ url: workspace.viewerUrl, eventName: workspace.name, workspaceId: workspace.id, interactive: false })}>View</button><button disabled={busy === workspace.id} onClick={() => void action("promote-login", workspace.id)}>Use login for this document</button><button className="workspace-stop" disabled={busy === workspace.id} onClick={() => void action("release", workspace.id)}>{busy === workspace.id ? "…" : "Stop"}</button></div></div>
+        <div className="workspace-card-meta"><span className={`workspace-status-chip ${workspace.status}`}>{authRequired ? "Waiting for login" : workspace.status === "ready" ? "Running" : workspace.status === "released" ? "Released" : workspace.status === "failed" ? "Failed" : "Starting"}</span><strong title={workspace.name}>{workspace.name}</strong><span className="workspace-browser-owner">Steel Chromium</span></div>
+        <div className="workspace-card-footer"><span>{workspace.access === "mutation" ? "Mutation lease" : "Read-only"} · {workspace.id.slice(0, 8)}</span><div><button disabled={!workspace.viewerUrl} onClick={() => workspace.viewerUrl && onWatch({ url: workspace.viewerUrl, eventName: workspace.name, workspaceId: workspace.id, interactive: false })}>View</button><button disabled={busy === workspace.id || workspace.status !== "ready"} onClick={() => void action("promote-login", workspace.id)}>Use login for this document</button><button className="workspace-stop" disabled={busy === workspace.id || workspace.status === "released"} onClick={() => void action("release", workspace.id)}>{busy === workspace.id ? "…" : "Stop"}</button></div></div>
         <div className="workspace-activity"><span>Agent activity</span><strong>{latest?.message ?? "Waiting for agent report"}</strong><ol className="workspace-activity-list">{workspace.activity?.slice(-4).reverse().map((entry) => <li key={`${entry.at}-${entry.type}`}><time>{new Date(entry.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</time><span>{entry.message}</span></li>)}</ol></div>
         <div className="workspace-control-dock"><span className="workspace-pause-mark">Ⅱ</span><span className="workspace-agent-mark">✣</span><div><strong>{workspace.name}</strong><small>{workspace.controller === "user" ? "You are in control" : authRequired ? "Agent waiting for login" : "Agent is in control"}</small></div>{workspace.controller === "user" ? <button className="workspace-takeover" onClick={() => void action("return", workspace.id)}>Return</button> : <button className="workspace-takeover" onClick={async () => { if (await action("takeover", workspace.id)) workspace.viewerUrl && onWatch({ url: workspace.viewerUrl, eventName: workspace.name, workspaceId: workspace.id, interactive: true }); }}>Take over</button>}<button className="workspace-dock-stop" disabled={busy === workspace.id} onClick={() => void action("release", workspace.id)}>Stop</button></div>
       </article>})}

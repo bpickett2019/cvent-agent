@@ -11,11 +11,21 @@ function headers(): Record<string, string> { return { "content-type": "applicati
 export function goldenSessionPath(): string { return resolve(/*turbopackIgnore: true*/ process.cwd(), "..", process.env.EMERALDX_SESSION_PATH ?? "session.json"); }
 
 export async function goldenStatus(): Promise<{ status: "ready" | "missing"; maintenance: MaintenanceState | null }> {
-  const ready = await readFile(goldenSessionPath(), "utf8").then(() => true).catch(() => false);
-  return { status: ready ? "ready" : "missing", maintenance };
+  const saved = await readFile(goldenSessionPath(), "utf8").then(() => true).catch(() => false);
+  await recoverMaintenance();
+  if (!saved || !maintenanceWebSocket) return { status: "missing", maintenance };
+  try {
+    assertAuthenticatedCventUrl(await currentCdpUrl(maintenanceWebSocket));
+    await writeGoldenContext();
+    startAuthenticationHeartbeat();
+    return { status: "ready", maintenance };
+  } catch {
+    return { status: "missing", maintenance };
+  }
 }
 
 export async function startLoginMaintenance(): Promise<MaintenanceState> {
+  await recoverMaintenance();
   if (maintenance && maintenanceWebSocket) {
     await navigateCdp(maintenanceWebSocket, process.env.CVENT_APP_URL ?? "https://app.cvent.com/");
     return maintenance;
@@ -30,6 +40,21 @@ export async function startLoginMaintenance(): Promise<MaintenanceState> {
   maintenanceWebSocket = rebaseWebSocket(session.websocketUrl);
   await navigateCdp(maintenanceWebSocket, process.env.CVENT_APP_URL ?? "https://app.cvent.com/");
   return maintenance;
+}
+
+async function recoverMaintenance(): Promise<void> {
+  if (maintenance && maintenanceWebSocket) return;
+  const response = await fetch(`${baseUrl()}/v1/sessions`, { headers: headers() }).catch(() => null);
+  if (!response?.ok) return;
+  type LiveSession = { id: string; status?: string; websocketUrl?: string; debugUrl?: string; sessionViewerUrl?: string; createdAt?: string };
+  const body = await response.json() as { sessions?: LiveSession[] } | LiveSession[];
+  const sessions = Array.isArray(body) ? body : body.sessions ?? [];
+  const session = sessions.find((candidate) => candidate.status === "live" && candidate.websocketUrl);
+  if (!session?.websocketUrl) return;
+  const rawViewer = session.debugUrl ?? session.sessionViewerUrl;
+  if (!rawViewer) return;
+  maintenance = { sessionId: session.id, viewerUrl: rebaseUrl(rawViewer), startedAt: session.createdAt ?? new Date().toISOString() };
+  maintenanceWebSocket = rebaseWebSocket(session.websocketUrl);
 }
 
 function rebaseUrl(raw: string): string { const source = new URL(raw); const target = new URL(baseUrl()); source.protocol = target.protocol; source.host = target.host; return source.toString(); }
@@ -55,13 +80,18 @@ export async function captureGoldenLogin(): Promise<void> {
   if (!maintenance) throw new Error("No active Steel login maintenance session");
   if (!maintenanceWebSocket) throw new Error("Steel login maintenance session has no CDP connection");
   assertAuthenticatedCventUrl(await currentCdpUrl(maintenanceWebSocket));
+  await writeGoldenContext();
+  startAuthenticationHeartbeat();
+}
+
+async function writeGoldenContext(): Promise<void> {
+  if (!maintenance) throw new Error("No active Steel login maintenance session");
   const response = await fetch(`${baseUrl()}/v1/sessions/${maintenance.sessionId}/context`, { headers: headers() });
   if (!response.ok) throw new Error(`Steel context capture failed: ${response.status} ${await response.text()}`);
   const context = await response.json() as { cookies?: unknown[]; localStorage?: Record<string, Record<string, string>>; sessionStorage?: Record<string, Record<string, string>>; indexedDB?: Record<string, unknown[]>; userAgent?: string };
   const liveDetails = await fetch(`${baseUrl()}/v1/sessions/${maintenance.sessionId}/live-details`, { headers: headers() }).then((result) => result.ok ? result.json() as Promise<{ browserState?: { userAgent?: string } }> : undefined).catch(() => undefined);
   const session = { cookies: context.cookies ?? [], ...(context.localStorage ? { localStorage: context.localStorage } : {}), ...(context.sessionStorage ? { sessionStorage: context.sessionStorage } : {}), ...(context.indexedDB ? { indexedDB: context.indexedDB } : {}), ...(liveDetails?.browserState?.userAgent ? { userAgent: liveDetails.browserState.userAgent } : {}) };
   const target = goldenSessionPath(); await mkdir(dirname(target), { recursive: true, mode: 0o700 }); await writeFile(target, `${JSON.stringify(session, null, 2)}\n`, { mode: 0o600 }); await chmod(target, 0o600);
-  startAuthenticationHeartbeat();
 }
 
 function startAuthenticationHeartbeat(): void {

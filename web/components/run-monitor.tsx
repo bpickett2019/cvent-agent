@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AgentWorkspaces } from "./agent-workspaces";
 
 interface MonitoredJob {
@@ -20,13 +20,13 @@ interface MonitoredJob {
   };
 }
 
-export function RunMonitor({ onRunComplete }: { onRunComplete?: () => void }) {
+export function RunMonitor() {
   const [jobs, setJobs] = useState<MonitoredJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<Record<string, string>>({});
   const [selectedViewer, setSelectedViewer] = useState<{ url: string; eventName: string; workspaceId?: string; interactive: boolean } | null>(null);
   const [error, setError] = useState("");
-  const observedActiveRun = useRef(false);
+
 
   const watchViewer = useCallback((viewer: { url: string; eventName: string; workspaceId?: string; interactive?: boolean }) => {
     setSelectedViewer({ ...viewer, interactive: viewer.interactive ?? false });
@@ -53,13 +53,6 @@ export function RunMonitor({ onRunComplete }: { onRunComplete?: () => void }) {
     return () => window.clearInterval(timer);
   }, [refresh]);
 
-  useEffect(() => {
-    if (jobs.some((job) => job.status === "running" || job.status === "queued" || job.status === "paused")) observedActiveRun.current = true;
-    if (observedActiveRun.current && jobs.length > 0 && jobs.every((job) => ["halted", "succeeded", "failed", "cancelled"].includes(job.status))) {
-      const timer = window.setTimeout(() => onRunComplete?.(), 900);
-      return () => window.clearTimeout(timer);
-    }
-  }, [jobs, onRunComplete]);
 
   const control = async (job: MonitoredJob, action: "pause" | "resume" | "cancel") => {
     if (action === "cancel" && !window.confirm(`Cancel ${job.eventName}? Completed Cvent steps will remain for triage.`)) return;
