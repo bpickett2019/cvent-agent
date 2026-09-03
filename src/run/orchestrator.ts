@@ -478,9 +478,18 @@ async function reconcileEventDetails(session: BrowserSession, task: Task, eventI
   if (!/\/Index\/View/i.test(session.currentUrl())) return { status: "halted", evidence: null, detail: "Event details Save did not reach the canonical View surface; no success was recorded." };
   await session.perform({ type: "navigate", url: editUrl, taskId: task.id });
   await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_000));
-  if (!(await matches())) return { status: "halted", evidence: null, detail: "Event details Save returned to View, but independent Edit-form read-back did not match every requested field." };
+  if (!(await matches())) {
+    await fill('input[name="EventDatesInputModel.StartDate-Datetxtbox"]', start.date); await fill('input[name="EventDatesInputModel.StartDate-Timetxtbox"]', start.time);
+    await fill('input[name="EventDatesInputModel.EndDate-Datetxtbox"]', end.date); await fill('input[name="EventDatesInputModel.EndDate-Timetxtbox"]', end.time); await fill('input[name="EventDatesInputModel.ArchiveDate-Datetxtbox"]', archive.date);
+    await session.perform({ type: "click", selector: "button#Save", taskId: task.id });
+    const correctionDeadline = Date.now() + 20_000;
+    while (!/\/Index\/View/i.test(session.currentUrl()) && Date.now() < correctionDeadline) await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
+    if (!/\/Index\/View/i.test(session.currentUrl())) return { status: "halted", evidence: null, detail: "Event format changed, but the date-correction Save did not reach View." };
+    await session.perform({ type: "navigate", url: editUrl, taskId: task.id }); await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_000));
+    if (!(await matches())) return { status: "halted", evidence: null, detail: "Independent Edit-form read-back did not match every requested field after the bounded format/date correction." };
+  }
   await session.perform({ type: "navigate", url: viewUrl, taskId: task.id });
-  return { status: "succeeded", evidence: `Event Information saved once and independently read back for ${spec.details.name} (${eventId}); generated event code was preserved.`, detail: null };
+  return { status: "succeeded", evidence: `Event Information was saved and independently read back for ${spec.details.name} (${eventId}); generated event code was preserved.`, detail: null };
 }
 
 async function dispatchApiTask(
